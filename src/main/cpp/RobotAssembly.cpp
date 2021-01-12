@@ -833,18 +833,6 @@ private:
 		if (joyinfo.ButtonBank[0] == 1)
 			Reset();
 	}
-
-	void TimeSlice(double dTime_s)
-	{
-		m_dTime_s = dTime_s;
-		//Grab kinematic velocities from controller
-		GetInputSlice(dTime_s);
-		//Update the predicted motion for this time slice
-		m_robot.TimeSlice(dTime_s);
-		m_Entity.TimeSlice(dTime_s);
-		UpdateVariables();
-	}
-
 	void SetUpHooks(bool enable)
 	{
 		if (enable)
@@ -957,6 +945,17 @@ public:
 		}
 	}
 
+	void TimeSlice(double dTime_s)
+	{
+		m_dTime_s = dTime_s;
+		//Grab kinematic velocities from controller
+		GetInputSlice(dTime_s);
+		//Update the predicted motion for this time slice
+		m_robot.TimeSlice(dTime_s);
+		m_Entity.TimeSlice(dTime_s);
+		UpdateVariables();
+	}
+
 	void SetGameMode(int mode)
 	{
 		//If we are leaving from autonomous while still streaming terminate the goal
@@ -1024,14 +1023,35 @@ public:
 class RobotAssem_Internal
 {
 private:
+	#pragma region _members_
+	#pragma region _testers_
 	//TestJoystick m_robot;  //01 joystick
 	//Test03_Swerve_Kinematics_with_Joystick m_robot; //02 kinematics and joystick
 	//Test_Swerve_Entity_Joystick m_robot;  //03 simple motion profiling  TeleV1
 	//Test_Swerve_Viewer m_robot;  //04 full profiling TeleV2
-	Test_Swerve_Rotary m_robot;  //05 full tele with rotary TeleV3
-	//#define __HasAutonMethods__
-	double m_LastTime=0.0;
+	//Test_Swerve_Rotary m_robot;  //05 full tele with rotary TeleV3
+	//enable auton methods for all tests beyond this point	
+	#define __HasAutonMethods__
+	Test_Swerve_TeleAuton m_robot;  //06 tele auton version 1 (no property integration)
+	#pragma endregion
+
+	double m_LastTime=0.0;  //used for time slices
+	//since some of the testers do not have the game mode, we manage this here
+	//also this corresponds to each callback where its one for one on what it updates to
+	enum calltype
+	{
+		eDisabled,
+		eAuton,
+		eTele,
+		eTest
+	};
+
+	//current is set from the head of the callback and last is set at the tail of periodic
+	calltype m_LastMode=eDisabled;
+	calltype m_CurrentMode=eDisabled;
 	bool m_IsInit=false;
+	#pragma endregion
+
 	void Init()
 	{
 		if (!m_IsInit)
@@ -1039,6 +1059,17 @@ private:
 			m_IsInit=true;
 			m_robot.Init();
 		}
+		#ifdef __HasAutonMethods__
+		if (m_CurrentMode!=m_LastMode)
+		{
+			m_robot.Stop();
+			if (m_CurrentMode!=eDisabled)
+			{
+				m_robot.SetGameMode(m_CurrentMode-1); //we kept the types aligned
+				m_robot.Start();
+			}
+		}
+		#endif
 	}
 	__inline double GetTime() 
 	{
@@ -1050,10 +1081,10 @@ private:
 			return duration_cast<duration<double>>(system_clock::now().time_since_epoch())
 				.count();
 	}
-  void TimeSlice()
+  	void TimeSlice()
   {
         const double CurrentTime = GetTime();
-        #if 1
+        #if 0
         const double DeltaTime = CurrentTime - m_LastTime;
         #else
         const double DeltaTime=0.01;  //It's best to use sythetic time for simulation to step through code
@@ -1064,38 +1095,47 @@ private:
         m_robot.TimeSlice(DeltaTime);
   }
   public:
+  	#pragma region _public WPI callbacks_
     void AutonomousInit()
 	{
+		m_CurrentMode=eAuton;
 	    Init();
 	}
 	void AutonomousPeriodic()
 	{
 		TimeSlice();
+		m_LastMode=eAuton;
 	}
 	void TeleopInit()
 	{
+		m_CurrentMode=eTele;
 		Init();
 	}
 	void TeleopPeriodic()
 	{
 		TimeSlice();
+		m_LastMode=eTele;
 	}
 	void DisabledInit()
 	{
-
+		m_CurrentMode=eDisabled;
 	}
 	void DisabledPeriodic()
 	{
 		//Nothing to do for the scope of drive, but may need to do things for vision
+		m_LastMode=eDisabled;
 	}
 	void TestInit()
 	{
+		m_CurrentMode=eTest;
 		Init();
 	}
 	void TestPeriodic()
 	{
 		TimeSlice();
+		m_LastMode=eTest;
 	}
+	#pragma endregion
 };
 
 #pragma region _wrapper_methods_
