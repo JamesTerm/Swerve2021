@@ -14,8 +14,8 @@
 //the odometry.  Use the regions to help view each section of interest.
 #pragma endregion
 
+#pragma region _01 Test Joystick_
 //1. Just joystick
-#pragma region _Test Joystick_
 class TestJoystick
 {
 private:
@@ -34,10 +34,9 @@ public:
     }
 };
 #pragma endregion
-
+#pragma region _02 Test03_Swerve_Kinematics_with_Joystick_
 //2. kinematics and joystick
 #include "Modules/Robot/DriveKinematics/Vehicle_Drive.h"
-#pragma region _Test03_Swerve_Kinematics_with_Joystick_
 
 class Test03_Swerve_Kinematics_with_Joystick
 {
@@ -108,11 +107,10 @@ public:
 	}
 };
 #pragma endregion
-
+#pragma region _03 Test_Swerve_Entity_Joystick Tele V1_
 //3. Add simple form of motion control (does not handle change of direction or centrepetal forces)
 #include "Modules/Robot/Entity2D/Entity2D.h"
 #include "Modules/Robot/MotionControl2D_simple/MotionControl2D.h"
-#pragma region _Test_Swerve_Entity_Joystick Tele V1_
 
 class Test_Swerve_Entity_Joystick
 {
@@ -279,11 +277,10 @@ public:
 	}
 };
 #pragma endregion
-
+#pragma region _04 Test_Swerve_Viewer Tele V2_
 //4. Full physics motion profiling, last version assembly before using swerve robot assembly
 #include "Modules/Input/JoystickConverter.h"
 #include "Modules/Robot/MotionControl2D_physics/MotionControl2D.h"
-#pragma region _Test_Swerve_Viewer Tele V2_
 
 class Test_Swerve_Viewer
 {
