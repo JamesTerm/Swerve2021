@@ -1,13 +1,19 @@
 #include <memory>
 
-class TeleOp_Internal;
-class TeleOp
+class RobotAssem_Internal;
+class RobotAssem
 {
 public:
-  TeleOp();
-  void Init();
+  RobotAssem();
   //Note: Timed Robot presents it this way so we make our own time delta within the implementation
-  void TimeSlice();
+  void AutonomousInit();
+  void AutonomousPeriodic();
+  void TeleopInit();
+  void TeleopPeriodic();
+  void DisabledInit();
+  void DisabledPeriodic();
+  void TestInit();
+  void TestPeriodic();
 private:
-  std::shared_ptr<TeleOp_Internal> m_tester;
+  std::shared_ptr<RobotAssem_Internal> m_robot;
 };

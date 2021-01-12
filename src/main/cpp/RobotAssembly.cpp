@@ -3,7 +3,6 @@
 #include "Base/Vec2d.h"
 #include "Base/Misc.h"
 #include "RobotAssembly.h"
-#include "Modules/Input/wpi_Joystick_Controller/wpi_Joystick.h"
 
 #pragma region _description_
 //So in here I'll keep various assmeblies to use, these are in order of how they add on and get more developed
@@ -16,6 +15,7 @@
 
 #pragma region _01 Test Joystick_
 //1. Just joystick
+#include "Modules/Input/wpi_Joystick_Controller/wpi_Joystick.h"
 class TestJoystick
 {
 private:
@@ -789,7 +789,7 @@ private:
 	void GetInputSlice(double dTime_s)
 	{
 		using namespace Module::Input;
-		using JoystickInfo = wpi_Joystick::JoystickInfo;
+		//using JoystickInfo = wpi_Joystick::JoystickInfo;
 		size_t JoyNum = 0;
 
 		wpi_Joystick::JoyState joyinfo;
@@ -1021,31 +1021,35 @@ public:
 #pragma endregion
 
 //We just pick what we test or use from here m_teleop declaration
-class TeleOp_Internal
+class RobotAssem_Internal
 {
 private:
-//TestJoystick m_teleop;  //01 joystick
-//Test03_Swerve_Kinematics_with_Joystick m_teleop; //02 kinematics and joystick
-//Test_Swerve_Entity_Joystick m_teleop;  //03 simple motion profiling  TeleV1
-//Test_Swerve_Viewer m_teleop;  //04 full profiling TeleV2
-Test_Swerve_Rotary m_teleop;  //05 full tele with rotary TeleV3
-double m_LastTime=0.0;
+	//TestJoystick m_robot;  //01 joystick
+	//Test03_Swerve_Kinematics_with_Joystick m_robot; //02 kinematics and joystick
+	//Test_Swerve_Entity_Joystick m_robot;  //03 simple motion profiling  TeleV1
+	//Test_Swerve_Viewer m_robot;  //04 full profiling TeleV2
+	Test_Swerve_Rotary m_robot;  //05 full tele with rotary TeleV3
+	//#define __HasAutonMethods__
+	double m_LastTime=0.0;
+	bool m_IsInit=false;
+	void Init()
+	{
+		if (!m_IsInit)
+		{
+			m_IsInit=true;
+			m_robot.Init();
+		}
+	}
+	__inline double GetTime() 
+	{
+		//TODO get the time from WPI so we can use the step effectively
+			using std::chrono::duration;
+			using std::chrono::duration_cast;
+			using std::chrono::system_clock;
 
-__inline double GetTime() 
-{
-    //TODO get the time from WPI so we can use the step effectively
-		using std::chrono::duration;
-		using std::chrono::duration_cast;
-		using std::chrono::system_clock;
-
-		return duration_cast<duration<double>>(system_clock::now().time_since_epoch())
-			.count();
-}
-public:
-  void Init()
-  {
-    m_teleop.Init();
-  }
+			return duration_cast<duration<double>>(system_clock::now().time_since_epoch())
+				.count();
+	}
   void TimeSlice()
   {
         const double CurrentTime = GetTime();
@@ -1057,23 +1061,80 @@ public:
         m_LastTime = CurrentTime;
 		//sanity check
 		//frc::SmartDashboard::PutNumber("time_delta",DeltaTime);
-        m_teleop.TimeSlice(DeltaTime);
+        m_robot.TimeSlice(DeltaTime);
   }
+  public:
+    void AutonomousInit()
+	{
+	    Init();
+	}
+	void AutonomousPeriodic()
+	{
+		TimeSlice();
+	}
+	void TeleopInit()
+	{
+		Init();
+	}
+	void TeleopPeriodic()
+	{
+		TimeSlice();
+	}
+	void DisabledInit()
+	{
+
+	}
+	void DisabledPeriodic()
+	{
+		//Nothing to do for the scope of drive, but may need to do things for vision
+	}
+	void TestInit()
+	{
+		Init();
+	}
+	void TestPeriodic()
+	{
+		TimeSlice();
+	}
 };
 
 #pragma region _wrapper_methods_
-TeleOp::TeleOp()
+
+RobotAssem::RobotAssem()
 {
-    m_tester=std::make_shared<TeleOp_Internal>();
+    m_robot=std::make_shared<RobotAssem_Internal>();
 }
-void TeleOp::Init()
-{
-    m_tester->Init();
-}
-void TeleOp::TimeSlice()
-{
-    //TODO put our time delta here
-    m_tester->TimeSlice();
-}
+  void RobotAssem::AutonomousInit()
+  {
+	  m_robot->AutonomousInit();
+  }
+  void RobotAssem::AutonomousPeriodic()
+  {
+	  m_robot->AutonomousPeriodic();
+  }
+  void RobotAssem::TeleopInit()
+  {
+	  m_robot->TeleopInit();
+  }
+  void RobotAssem::TeleopPeriodic()
+  {
+	  m_robot->TeleopPeriodic();
+  }
+  void RobotAssem::DisabledInit()
+  {
+	  m_robot->DisabledInit();
+  }
+  void RobotAssem::DisabledPeriodic()
+  {
+	  m_robot->DisabledPeriodic();
+  }
+  void RobotAssem::TestInit()
+  {
+	  m_robot->TestInit();
+  }
+  void RobotAssem::TestPeriodic()
+  {
+	m_robot->TeleopPeriodic();
+  }
 
 #pragma endregion

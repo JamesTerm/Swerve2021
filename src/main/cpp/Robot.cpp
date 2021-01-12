@@ -58,21 +58,28 @@ void Robot::AutonomousPeriodic() {
 
 void Robot::TeleopInit() 
 {
-  m_TeleOp.Init();
+  m_Robot.TeleopInit();
 }
-
 void Robot::TeleopPeriodic() 
 {
-  m_TeleOp.TimeSlice();
+  m_Robot.TeleopPeriodic();
 }
-
-void Robot::DisabledInit() {}
-
-void Robot::DisabledPeriodic() {}
-
-void Robot::TestInit() {}
-
-void Robot::TestPeriodic() {}
+void Robot::DisabledInit() 
+{
+  m_Robot.DisabledInit();
+}
+void Robot::DisabledPeriodic() 
+{
+  m_Robot.DisabledPeriodic();
+}
+void Robot::TestInit() 
+{
+  m_Robot.TeleopInit();
+}
+void Robot::TestPeriodic() 
+{
+  m_Robot.TeleopPeriodic();
+}
 
 #ifndef RUNNING_FRC_TESTS
 int main() {
