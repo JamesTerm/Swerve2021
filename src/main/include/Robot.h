@@ -11,6 +11,8 @@
 
 class Robot : public frc::TimedRobot {
  public:
+ //defaults to 20ms... really want 10
+  Robot() : TimedRobot(0.010) {}
   void RobotInit() override;
   void RobotPeriodic() override;
   void AutonomousInit() override;

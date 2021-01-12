@@ -685,6 +685,340 @@ public:
 	}
 };
 #pragma endregion
+#pragma region _06 Test_Swerve_Viewer TeleAuton V1_
+//This adds autonomous, they use the same slice
+#include "Modules/Input/AI_Input/AI_Input_Example.h"
+
+class Test_Swerve_TeleAuton
+{
+private:
+	#pragma region _member variables_
+	Module::Localization::Entity2D m_Entity;
+	//Here we can choose which motion control to use, this works because the interface
+	//between them remain (mostly) identical
+	Module::Input::wpi_Joystick m_joystick;  //Note: always late binding, so we can aggregate direct easy here
+	Module::Input::Analog_EventEntry m_joystick_options;  //for now a simple one-stop option for all
+	Module::Input::AI_Example m_Goal;
+	Module::Robot::SwerveRobot m_robot;  //keep track of our intended velocities
+
+	//These typically are constants, but if we have gear shifting they can change
+	double m_maxspeed; //max velocity forward in feet per second
+	double m_max_heading_rad;  //max angular velocity in radians
+	double m_dTime_s=0.016;  //cached so other callbacks can access
+
+	enum class game_mode
+	{
+		eAuton,
+		eTele,
+		eTest
+	} m_game_mode= game_mode::eTele;
+
+	bool m_IsStreaming = false;
+	#pragma endregion
+
+	void UpdateVariables()
+	{
+		using namespace frc;
+		Module::Localization::Entity2D &entity = m_Entity;
+		using namespace Module::Localization;
+		const Entity2D::Vector2D linear_velocity = entity.GetCurrentVelocity();
+		Vec2D velocity_normalized(linear_velocity.x, linear_velocity.y);
+		double magnitude = velocity_normalized.normalize();
+		//Entity variables-------------------------------------------
+		SmartDashboard::PutNumber("Velocity", Meters2Feet(magnitude));
+		SmartDashboard::PutNumber("Rotation Velocity", m_Entity.GetCurrentAngularVelocity());
+		Entity2D::Vector2D position = entity.GetCurrentPosition();
+		SmartDashboard::PutNumber("X_ft", Meters2Feet(position.x));
+		SmartDashboard::PutNumber("Y_ft", Meters2Feet(position.y));
+		//If it is angle acceleration is being setpoint driven we read this (e.g. AI controlled)
+		if (m_robot.GetIsDrivenAngular())
+		{
+			//m_current_state.bits.IntendedOrientation = m_robot.Get_IntendedOrientation();
+			SmartDashboard::PutNumber("Travel_Heading", RAD_2_DEG(m_robot.Get_IntendedOrientation()));
+		}
+		else
+		{
+			//TeleOp controlled, point forward if we are rotating in place, otherwise, point to the direction of travel
+			//Like with the kinematics if we are not moving we do not update the intended orientation (using this)
+			//This is just cosmetic, but may be handy to keep for teleop
+			if (!IsZero(linear_velocity.x + linear_velocity.y, 0.02))
+			{
+				//m_current_state.bits.IntendedOrientation = atan2(velocity_normalized[0], velocity_normalized[1]);
+				//for swerve the direction of travel is not necessarily the heading, so we show this as well as heading
+				SmartDashboard::PutNumber("Travel_Heading", RAD_2_DEG(atan2(velocity_normalized[0], velocity_normalized[1])));
+			}
+			else if (!IsZero(entity.GetCurrentAngularVelocity()))
+			{
+				//point forward locally when rotating in place
+				//m_current_state.bits.IntendedOrientation = entity.GetCurrentHeading();
+				SmartDashboard::PutNumber("Travel_Heading", RAD_2_DEG(entity.GetCurrentHeading()));
+			}
+		}
+		SmartDashboard::PutNumber("Heading", RAD_2_DEG(entity.GetCurrentHeading()));
+		//To make this interesting, we keep the SmartDashboard to show the intended velocities...
+		//SmartDashboard::PutNumber("setpoint_angle", RAD_2_DEG(entity.Get_IntendedOrientation()));
+		//kinematic variables-------------------------------------------
+		const Module::Robot::SwerveVelocities &cv = m_robot.GetCurrentVelocities();
+		const Module::Robot::SwerveVelocities &iv = m_robot.GetIntendedVelocities();
+		const Module::Robot::SwerveVelocities &vo = m_robot.GetCurrentVoltages();
+
+		SmartDashboard::PutNumber("Wheel_fl_Velocity", Meters2Feet(iv.Velocity.AsArray[0]));
+		SmartDashboard::PutNumber("Wheel_fr_Velocity", Meters2Feet(iv.Velocity.AsArray[1]));
+		SmartDashboard::PutNumber("Wheel_rl_Velocity", Meters2Feet(iv.Velocity.AsArray[2]));
+		SmartDashboard::PutNumber("Wheel_rr_Velocity", Meters2Feet(iv.Velocity.AsArray[3]));
+		SmartDashboard::PutNumber("Wheel_fl_Voltage", vo.Velocity.AsArray[0]);
+		SmartDashboard::PutNumber("Wheel_fr_Voltage", vo.Velocity.AsArray[1]);
+		SmartDashboard::PutNumber("Wheel_rl_Voltage", vo.Velocity.AsArray[2]);
+		SmartDashboard::PutNumber("Wheel_rr_Voltage", vo.Velocity.AsArray[3]);
+		SmartDashboard::PutNumber("wheel_fl_Encoder", Meters2Feet(cv.Velocity.AsArray[0]));
+		SmartDashboard::PutNumber("wheel_fr_Encoder", Meters2Feet(cv.Velocity.AsArray[1]));
+		SmartDashboard::PutNumber("wheel_rl_Encoder", Meters2Feet(cv.Velocity.AsArray[2]));
+		SmartDashboard::PutNumber("wheel_rr_Encoder", Meters2Feet(cv.Velocity.AsArray[3]));
+
+		//For the angles either show raw or use simple dial using 180 to -180 with a 45 tick interval
+		//its not perfect, but it gives a good enough direction to tell (especially when going down)
+		SmartDashboard::PutNumber("Swivel_fl_Voltage", vo.Velocity.AsArray[4]);
+		SmartDashboard::PutNumber("Swivel_fr_Voltage", vo.Velocity.AsArray[5]);
+		SmartDashboard::PutNumber("Swivel_rl_Voltage", vo.Velocity.AsArray[6]);
+		SmartDashboard::PutNumber("Swivel_rr_Voltage", vo.Velocity.AsArray[7]);
+		SmartDashboard::PutNumber("swivel_fl_Raw", RAD_2_DEG(cv.Velocity.AsArray[4]));
+		SmartDashboard::PutNumber("swivel_fr_Raw", RAD_2_DEG(cv.Velocity.AsArray[5]));
+		SmartDashboard::PutNumber("swivel_rl_Raw", RAD_2_DEG(cv.Velocity.AsArray[6]));
+		SmartDashboard::PutNumber("swivel_rr_Raw", RAD_2_DEG(cv.Velocity.AsArray[7]));
+	}
+	void GetInputSlice(double dTime_s)
+	{
+		using namespace Module::Input;
+		using JoystickInfo = wpi_Joystick::JoystickInfo;
+		size_t JoyNum = 0;
+
+		wpi_Joystick::JoyState joyinfo;
+		//wpi_Joystick::JoyState joyinfo = {0}; //setup joy zero'd out
+		memset(&joyinfo, 0, sizeof(wpi_Joystick::JoyState));
+
+		size_t NoJoySticks = m_joystick.GetNoJoysticksFound();
+		if (NoJoySticks)
+		{
+			//printf("Button: 2=exit, x axis=strafe, y axis=forward/reverse, z axis turn \n");
+			m_joystick.read_joystick(JoyNum, joyinfo);
+		}
+		if (m_game_mode==game_mode::eTele)
+		{
+			//Check if we are being driven by some AI method, we override it if we have any angular velocity (i.e. some teleop interaction)
+			const double AngularVelocity = (AnalogConversion(joyinfo.Axis.Named.lZ, m_joystick_options) ) * m_max_heading_rad;
+			if (!IsZero(AngularVelocity) || (m_robot.GetIsDrivenAngular()==false))
+				m_robot.SetAngularVelocity(AngularVelocity);
+
+			//Get an input from the controllers to feed in... we'll hard code the x and y axis from both joy and keyboard
+			//we simply combine them so they can work inter-changeably (e.g. keyboard for strafing, joy for turning)
+			const double Forward = Feet2Meters(m_maxspeed * (AnalogConversion(joyinfo.Axis.Named.lY, m_joystick_options) ) * -1.0);
+			const double Right = Feet2Meters(m_maxspeed * (AnalogConversion(joyinfo.Axis.Named.lX, m_joystick_options) ));
+
+			//Check if we are being driven by some AI method, we override it if we have any linear velocity (i.e. some teleop interaction)
+			//Note: this logic does not quite work right for keyboard if it uses the forward "sticky" button, but since this isn't a real
+			//input I am not going to filter it out, but could if needed.  Also the fabs() ensures the forward and right do not cancel
+			//each other out
+			if (!IsZero(fabs(Forward) + fabs(Right)) || (m_robot.GetIsDrivenLinear() == false))
+				m_robot.SetLinearVelocity_local(Forward, Right);
+		}
+		else if (m_game_mode == game_mode::eAuton)
+		{
+			using namespace Framework::Base;
+			Goal& goal = m_Goal.GetGoal();
+			if (goal.GetStatus()==Goal::eActive)
+				goal.Process(dTime_s);
+		}
+		//TODO autonomous and goals here
+		//This comes in handy for testing, but could be good to stop robot if autonomous needs to stop
+		if (joyinfo.ButtonBank[0] == 1)
+			Reset();
+	}
+
+	void TimeSlice(double dTime_s)
+	{
+		m_dTime_s = dTime_s;
+		//Grab kinematic velocities from controller
+		GetInputSlice(dTime_s);
+		//Update the predicted motion for this time slice
+		m_robot.TimeSlice(dTime_s);
+		m_Entity.TimeSlice(dTime_s);
+		UpdateVariables();
+	}
+
+	void SetUpHooks(bool enable)
+	{
+		if (enable)
+		{
+			#pragma region _Robot Entity Linking_
+			//Now to link up the callbacks for the robot motion control:  Note we can link them up even if we are not using it
+			m_robot.Set_UpdateGlobalVelocity([&](const Vec2D &new_velocity)
+			{	m_Entity.SetLinearVelocity_global(new_velocity.y(), new_velocity.x());
+			});
+			m_robot.Set_UpdateHeadingVelocity([&](double new_velocity)
+			{	m_Entity.SetAngularVelocity(new_velocity);
+			});
+			m_robot.Set_GetCurrentPosition([&]() -> Vec2D
+			{
+				//This is a bit annoying, but for the sake of keeping modules independent (not dependent on vector objects)
+				//its worth the hassle
+				Vec2D ret = Vec2D(m_Entity.GetCurrentPosition().x, m_Entity.GetCurrentPosition().y);
+				return ret;
+			});
+			m_robot.Set_GetCurrentHeading([&]() -> double
+			{
+				return m_Entity.GetCurrentHeading();
+			});
+			#pragma endregion
+			#pragma region _AI Input Robot linking_
+			m_Goal.Set_GetCurrentPosition([&]() -> Vec2D
+				{
+					return m_robot.GetCurrentPosition();
+				});
+			m_Goal.Set_GetCurrentHeading([&]() -> double
+				{
+					return m_robot.GetCurrentHeading();
+				});
+			m_Goal.Set_DriveToLocation([&](double north, double east, bool absolute, bool stop_at_destination, double max_speed, bool can_strafe)
+				{
+					m_robot.DriveToLocation(north, east, absolute, stop_at_destination, max_speed, can_strafe);
+				});
+			m_Goal.Set_SetIntendedOrientation([&](double intended_orientation, bool absolute)
+				{
+					m_robot.SetIntendedOrientation(intended_orientation, absolute);
+				});
+			#pragma endregion
+		}
+		else
+		{
+			m_robot.Set_UpdateGlobalVelocity(nullptr);
+			m_robot.Set_UpdateHeadingVelocity(nullptr);
+			m_robot.Set_GetCurrentPosition(nullptr);
+			m_robot.Set_GetCurrentHeading(nullptr);
+		}
+	}
+public:
+	Test_Swerve_TeleAuton()
+	{
+		SetUpHooks(true);
+	}
+	void Reset()
+	{
+		m_Entity.Reset();
+		m_robot.Reset();
+	}
+
+	void Init()
+	{
+		m_joystick.Init();
+		m_joystick_options = { 
+			0.3,   //filter dead zone
+			1.0,   //additional scale
+			1.0,   // curve intensity
+			false  //is flipped
+			};
+		using namespace Module::Robot;
+		//We'll make a square robot for ease to interpret angles
+		Vec2D wheel_dimensions(Inches2Meters(24), Inches2Meters(24));
+		//Assume our robot's top speed is 12 fps
+		m_maxspeed = 12.0;
+		//I could omit, but I want to show no skid; however, we can reserve this if in practice the 2-3 degrees
+		//of precision loss actually does (I don't believe this would ever be significant)
+		const double skid = 1.0;
+		//We'll compute the max angular velocity to use in equation
+		//like with tank spinning in place needs to be half of spinning with full forward
+		//this time... no skid
+		m_max_heading_rad = (2 * Feet2Meters(m_maxspeed) / wheel_dimensions.length()) * skid;
+
+		//Initialize these before calling reset (as the properties can dictate what to reset to)
+		//TODO provide properties method here and invoke it, init can have properties sent as a parameter here
+		m_robot.Init();
+
+		Reset();  //for entity variables
+	}
+	void Start()
+	{
+		if (!m_IsStreaming)
+		{
+			m_IsStreaming = true;
+			//Give driver station a default testing method by invoking here if we are in test mode
+			if (m_game_mode == game_mode::eTest)
+				test(1);
+			if (m_game_mode == game_mode::eAuton)
+				m_Goal.GetGoal().Activate();
+		}
+	}
+	void Stop()
+	{
+		if (m_IsStreaming)
+		{
+			m_IsStreaming = false;
+			if (m_game_mode == game_mode::eAuton)
+				m_Goal.GetGoal().Terminate();
+		}
+	}
+
+	void SetGameMode(int mode)
+	{
+		//If we are leaving from autonomous while still streaming terminate the goal
+		if ((m_IsStreaming) && (m_game_mode == game_mode::eAuton) && (game_mode::eAuton != (game_mode)mode))
+			m_Goal.GetGoal().Terminate();
+
+		printf("SetGameMode to ");
+		bool IsValid = true;
+		switch ((game_mode)mode)
+		{
+		case game_mode::eAuton:
+			printf("Auton \n");
+			//If we are entering into autonomous already streaming activate the goal
+			if ((m_IsStreaming) && (m_game_mode != game_mode::eAuton))
+				m_Goal.GetGoal().Activate();
+			break;
+		case game_mode::eTele:
+			printf("Tele \n");
+			break;
+		case game_mode::eTest:
+			printf("Test \n");
+			break;
+		default:
+			printf("Unknown \n");
+			IsValid = false;
+			break;
+		}
+		if (IsValid)
+			m_game_mode = (game_mode)mode;
+	}
+	void test(int test)
+	{
+		switch (test)
+		{
+		case 1:
+			printf("Testing rotate 90\n");
+			m_robot.SetIntendedOrientation(PI_2, false);
+			//m_robot.SetIntendedOrientation(PI_2, true);
+			break;
+		case 2:
+			m_robot.DriveToLocation(0.0, 0.0);  //simple drive home without managing orientation
+			break;
+		case 3:
+			m_robot.DriveToLocation(0.0, 0.0, true, true, 0.0, false);  //drive facing robot in the direction
+			break;
+		case 4:
+			m_robot.DriveToLocation(0.0, 0.0, true, false);  //hit home at full speed (see if it oscillates)
+			break;
+		case 5:
+			m_robot.DriveToLocation(Feet2Meters(5.0), 0.0, false);  //move forward (whatever direction it is by 5 feet)
+			break;
+		default:
+			printf("Test %d\n", test);
+		}
+	}
+	~Test_Swerve_TeleAuton()
+	{
+		m_robot.Shutdown(); //detach hooks early
+		SetUpHooks(false);
+	}
+};
+#pragma endregion
 
 //We just pick what we test or use from here m_teleop declaration
 class TeleOp_Internal
@@ -721,7 +1055,8 @@ public:
         const double DeltaTime=0.01;  //It's best to use sythetic time for simulation to step through code
         #endif
         m_LastTime = CurrentTime;
-
+		//sanity check
+		//frc::SmartDashboard::PutNumber("time_delta",DeltaTime);
         m_teleop.TimeSlice(DeltaTime);
   }
 };
