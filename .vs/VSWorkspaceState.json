@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\main",
+    "\\src\\main\\cpp",
+    "\\src\\main\\cpp\\Modules",
+    "\\src\\main\\cpp\\Modules\\Input",
+    "\\src\\main\\cpp\\Modules\\Input\\wpi_Joystick_Controller"
+  ],
+  "SelectedNode": "\\src\\main\\cpp\\Modules\\Input\\wpi_Joystick_Controller\\wpi_Joystick.cpp",
+  "PreviewInSolutionExplorer": false
+}

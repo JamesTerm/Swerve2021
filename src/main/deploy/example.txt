@@ -1,0 +1,10 @@
+Files placed in this directory will be deployed to the RoboRIO into the
+  'deploy' directory in the home folder. Use the 'frc::filesystem::GetDeployDirectory'
+  function from the 'frc/Filesystem.h' header to get a proper path relative to the deploy
+  directory.
+
+  James:
+  I think what this means is for scripted files like xml or lua, it looks like they have a 
+  standardized work-flow of where to put these and standardized way to find them in the code
+  which reads them.  (Hopefully the simulation can work with as well).
+  
