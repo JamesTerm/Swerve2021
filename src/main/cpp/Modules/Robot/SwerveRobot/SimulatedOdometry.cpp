@@ -120,6 +120,8 @@ double GetTweakedVoltage(double Voltage)
 	}
 	return Voltage;
 }
+//Not used
+#if 0
 static double AngleToHeight_m(double Angle_r)
 {
 	//TODO fix
@@ -130,6 +132,7 @@ static double AngleToHeight_m(double Angle_r)
 
 	return (sin(Angle_r * c_GearToArmRatio) * c_ArmLength_m) + c_GearHeightOffset;
 }
+#endif
 #pragma endregion
 class COMMON_API Potentiometer_Tester : public Ship_1D
 {
