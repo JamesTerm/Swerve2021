@@ -1084,7 +1084,7 @@ private:
   	void TimeSlice()
   {
         const double CurrentTime = GetTime();
-        #if 0
+        #if 1
         const double DeltaTime = CurrentTime - m_LastTime;
         #else
         const double DeltaTime=0.01;  //It's best to use sythetic time for simulation to step through code

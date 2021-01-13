@@ -76,11 +76,11 @@ void Robot::DisabledPeriodic()
 }
 void Robot::TestInit() 
 {
-  m_Robot.TeleopInit();
+  m_Robot.TestInit();
 }
 void Robot::TestPeriodic() 
 {
-  m_Robot.TeleopPeriodic();
+  m_Robot.TestPeriodic();
 }
 
 #ifndef RUNNING_FRC_TESTS
