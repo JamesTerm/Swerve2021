@@ -718,7 +718,9 @@ public:
 		TestAndromeda();
 		//This customizes to my AirFlo controller, add your own controller
 		//especially if your axis assignments need to change
-		Test_Controls_Airflo();
+		//Note: The simulation can collapse the port mapping, so you may be able to do without the port change, but
+		//the other controls like sensitivity should still be useful
+		//Test_Controls_Airflo();
 	}
 };
 
