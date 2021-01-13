@@ -1,3 +1,4 @@
+#include <frc/smartdashboard/SendableChooser.h>
 #include "StdAfx.h"
 #include "AI_Input_Example.h"
 #include "Goal_Types.h"
@@ -18,6 +19,17 @@ private:
 	AI_Input* m_pParent=nullptr;
 	double m_Timer=0.0;
 	MultitaskGoal m_Primer;
+	enum AutonType
+	{
+		eDoNothing,
+		eJustMoveForward,
+		eJustRotate,
+		eSimpleMoveRotateSequence,
+		eTestBoxWayPoints,
+		//eDriveTracking,
+		eNoAutonTypes
+	};
+	frc::SendableChooser<AutonType> m_chooser;
 
 	#pragma region _foundation goals_
 	class goal_clock : public AtomicGoal
@@ -230,22 +242,19 @@ private:
 	#pragma endregion
 	//Reserved Drive Tracking
 public:
-	enum AutonType
-	{
-		eDoNothing,
-		eJustMoveForward,
-		eJustRotate,
-		eSimpleMoveRotateSequence,
-		eTestBoxWayPoints,
-		//eDriveTracking,
-		eNoAutonTypes
-	};
 
 	AI_Example_internal(AI_Input* parent) : m_pParent(parent), m_Timer(0.0),
 		m_Primer(false)  //who ever is done first on this will complete the goals (i.e. if time runs out)
 	{
 		m_Status = eInactive;
+		m_chooser.SetDefaultOption("Do Nothing", eDoNothing);
+  		m_chooser.AddOption("Just Move Forward", eJustMoveForward);
+		m_chooser.AddOption("Just Rotate",eJustRotate);
+		m_chooser.AddOption("Move Rotate Sequence",eSimpleMoveRotateSequence);
+		m_chooser.AddOption("Test Box Waypoints",eTestBoxWayPoints);
+  		frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
 	}
+
 	void Activate()
 	{
 		m_Primer.AsGoal().Terminate();  //sanity check clear previous session
@@ -253,30 +262,11 @@ public:
 		m_Timer=0.0;
 		AutonType AutonTest = eDoNothing;
 		const char* const AutonTestSelection = "AutonTest";
-		#if 1
-		try
-		{
-			AutonTest = (AutonType)((size_t)frc::SmartDashboard::GetNumber(AutonTestSelection,0.0));
-		}
-		catch (...)
-		{
-			//set up default for nothing
-			frc::SmartDashboard::PutNumber(AutonTestSelection, (double)eDoNothing);
-		}
+		#if 0
+		frc::SmartDashboard::SetDefaultNumber(AutonTestSelection, 0.0);
+		AutonTest = (AutonType)((size_t)frc::SmartDashboard::GetNumber(AutonTestSelection));
 		#else
-		#if !defined __USE_LEGACY_WPI_LIBRARIES__
-		SmartDashboard::SetDefaultNumber(AutonTestSelection, 0.0);
-		AutonTest = (AutonType)((size_t)SmartDashboard::GetNumber(AutonTestSelection));
-		#else
-		//for cRIO checked in using zero in lua (default) to prompt the variable and then change to -1 to use it
-		if (auton.AutonTest != (size_t)-1)
-		{
-			SmartDashboard::PutNumber(AutonTestSelection, (double)0.0);
-			SmartDashboard::PutBoolean("TestVariables_set", false);
-		}
-		else
-			AutonTest = (AutonType)((size_t)SmartDashboard::GetNumber(AutonTestSelection));
-		#endif
+		AutonTest = m_chooser.GetSelected();
 		#endif
 
 		printf("Testing=%d \n", AutonTest);
