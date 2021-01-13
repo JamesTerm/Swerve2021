@@ -1,5 +1,6 @@
 
 #include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/Timer.h>
 #include "Base/Vec2d.h"
 #include "Base/Misc.h"
 #include "RobotAssembly.h"
@@ -688,6 +689,7 @@ public:
 #pragma region _06 Test_Swerve_Viewer TeleAuton V1_
 //This adds autonomous, they use the same slice
 #include "Modules/Input/AI_Input/AI_Input_Example.h"
+#include "Modules/Input/AI_Input/SmartDashboard_HelperFunctions.h"
 
 class Test_Swerve_TeleAuton
 {
@@ -930,7 +932,10 @@ public:
 			m_IsStreaming = true;
 			//Give driver station a default testing method by invoking here if we are in test mode
 			if (m_game_mode == game_mode::eTest)
-				test(1);
+			{
+				int test_to_run = (int)Auton_Smart_GetSingleValue("AutonTest", 1.0);
+				test(test_to_run);
+			}
 			if (m_game_mode == game_mode::eAuton)
 				m_Goal.GetGoal().Activate();
 		}
@@ -1035,6 +1040,7 @@ private:
 	Test_Swerve_TeleAuton m_robot;  //06 tele auton version 1 (no property integration)
 	#pragma endregion
 
+	frc::Timer m_Timer; //use frc timer to take advantage of stepping in simulation (works fine for actual roboRIO too)
 	double m_LastTime=0.0;  //used for time slices
 	//since some of the testers do not have the game mode, we manage this here
 	//also this corresponds to each callback where its one for one on what it updates to
@@ -1056,6 +1062,7 @@ private:
 	{
 		if (!m_IsInit)
 		{
+			m_Timer.Reset();
 			m_IsInit=true;
 			m_robot.Init();
 		}
@@ -1083,7 +1090,8 @@ private:
 	}
   	void TimeSlice()
   {
-        const double CurrentTime = GetTime();
+	  
+        const double CurrentTime = m_Timer.GetFPGATimestamp();
         #if 1
         const double DeltaTime = CurrentTime - m_LastTime;
         #else

@@ -1,7 +1,7 @@
 #pragma once
 #include <frc/smartdashboard/SmartDashboard.h>
 
-#define Robot_TesterCode
+//#define Robot_TesterCode
 __inline bool Auton_Smart_GetSingleValue_Bool(const char* SmartName, bool default_value)
 {
 	using namespace frc;
@@ -22,7 +22,7 @@ __inline bool Auton_Smart_GetSingleValue_Bool(const char* SmartName, bool defaul
 #else
 #if !defined __USE_LEGACY_WPI_LIBRARIES__
 	SmartDashboard::SetDefaultBoolean(SmartName, default_value);
-	result = SmartDashboard::GetBoolean(SmartName);
+	result = SmartDashboard::GetBoolean(SmartName,false);
 #else
 //for cRIO checked in using zero in lua (default) to prompt the variable and then change to -1 to use it
 	if (!SmartDashboard::GetBoolean("TestVariables_set"))
@@ -56,7 +56,7 @@ __inline void Auton_Smart_GetMultiValue_Bool(size_t NoItems, const char* const S
 	for (size_t i = 0; i < NoItems; i++)
 	{
 		SmartDashboard::SetDefaultBoolean(SmartNames[i], *(SmartVariables[i]));
-		*(SmartVariables[i]) = SmartDashboard::GetBoolean(SmartNames[i]);
+		*(SmartVariables[i]) = SmartDashboard::GetBoolean(SmartNames[i],false);
 	}
 #else
 	for (size_t i = 0; i < NoItems; i++)
@@ -91,7 +91,7 @@ __inline double Auton_Smart_GetSingleValue(const char* SmartName, double default
 #else
 #if !defined __USE_LEGACY_WPI_LIBRARIES__
 	SmartDashboard::SetDefaultNumber(SmartName, default_value);
-	result = SmartDashboard::GetNumber(SmartName);
+	result = SmartDashboard::GetNumber(SmartName,0.0);
 #else
 //for cRIO checked in using zero in lua (default) to prompt the variable and then change to -1 to use it
 	if (!SmartDashboard::GetBoolean("TestVariables_set"))
@@ -125,7 +125,7 @@ __inline void Auton_Smart_GetMultiValue(size_t NoItems, const char* const SmartN
 	for (size_t i = 0; i < NoItems; i++)
 	{
 		SmartDashboard::SetDefaultNumber(SmartNames[i], *(SmartVariables[i]));
-		*(SmartVariables[i]) = SmartDashboard::GetNumber(SmartNames[i]);
+		*(SmartVariables[i]) = SmartDashboard::GetNumber(SmartNames[i],0.0);
 	}
 #else
 	for (size_t i = 0; i < NoItems; i++)
