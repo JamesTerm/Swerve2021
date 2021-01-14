@@ -1315,7 +1315,7 @@ public:
 		m_robot.Reset();
 	}
 
-	void Init()
+	virtual void Init()
 	{
 		m_joystick.Init();
 		using namespace Module::Robot;
@@ -1452,7 +1452,8 @@ class Main_Assembly : public Test_Swerve_Properties
 private:
 	Module::Output::WPI_Output m_WPI;
 
-	void SetUpHooks(bool enable)
+	//constructor can't virtually call this so, we give it it's own name an manage it here
+	void SetUpHooks_main(bool enable)
 	{
 		Test_Swerve_Properties::SetUpHooks(enable);
 		//TODO link Swerve Robot to the physical odomety once it is ready
@@ -1472,9 +1473,24 @@ private:
 		else
 		{
 			m_WPI.SetVoltageCallback(nullptr);
+			m_WPI.SetSimOdometry(nullptr);
 		}
 	}
 	public:
+	Main_Assembly()
+	{
+		SetUpHooks_main(true);
+	}
+	~Main_Assembly()
+	{
+		SetUpHooks_main(false);
+	}
+	void Init()
+	{
+		//call predessor first to setup the properties
+		Test_Swerve_Properties::Init();
+		m_WPI.Init(&m_properties);
+	}
 	void TimeSlice(double dTime_s)
 	{
 		Test_Swerve_Properties::TimeSlice(dTime_s);
