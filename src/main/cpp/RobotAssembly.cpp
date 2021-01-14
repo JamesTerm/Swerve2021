@@ -608,6 +608,10 @@ public:
 		m_Entity.TimeSlice(dTime_s);
 		UpdateVariables();
 	}
+	void SimulatorTimeSlice(double dTime_s)
+	{
+		m_robot.SimulatorTimeSlice(dTime_s);
+	}
 
 	void SetUpHooks(bool enable)
 	{
@@ -959,6 +963,10 @@ public:
 		m_robot.TimeSlice(dTime_s);
 		m_Entity.TimeSlice(dTime_s);
 		UpdateVariables();
+	}
+	void SimulatorTimeSlice(double dTime_s)
+	{
+		m_robot.SimulatorTimeSlice(dTime_s);
 	}
 
 	void SetGameMode(int mode)
@@ -1378,7 +1386,10 @@ public:
 		m_Entity.TimeSlice(dTime_s);
 		UpdateVariables();
 	}
-
+	void SimulatorTimeSlice(double dTime_s)
+	{
+		m_robot.SimulatorTimeSlice(dTime_s);
+	}
 	void SetGameMode(int mode)
 	{
 		//If we are leaving from autonomous while still streaming terminate the goal
@@ -1498,6 +1509,7 @@ private:
 	}
 	void SimulatorTimeSlice(double dTime_s)
 	{
+		Test_Swerve_Properties::SimulatorTimeSlice(dTime_s);
 		m_WPI.SimulatorTimeSlice(dTime_s);
 	}
 
@@ -1513,6 +1525,8 @@ private:
 	//Test03_Swerve_Kinematics_with_Joystick m_robot; //02 kinematics and joystick
 	//Test_Swerve_Entity_Joystick m_robot;  //03 simple motion profiling  TeleV1
 	//Test_Swerve_Viewer m_robot;  //04 full profiling TeleV2
+	//Enable simulation time slices for all tests beyond this point
+	#define __HasSimulation__
 	//Test_Swerve_Rotary m_robot;  //05 full tele with rotary TeleV3
 	//enable auton methods for all tests beyond this point	
 	#define __HasAutonMethods__
@@ -1523,6 +1537,7 @@ private:
 
 	frc::Timer m_Timer; //use frc timer to take advantage of stepping in simulation (works fine for actual roboRIO too)
 	double m_LastTime=0.0;  //used for time slices
+	double m_simLastTime=0.0;  //for simulation time slices
 	//since some of the testers do not have the game mode, we manage this here
 	//also this corresponds to each callback where its one for one on what it updates to
 	enum calltype
@@ -1583,6 +1598,17 @@ private:
 		//frc::SmartDashboard::PutNumber("time_delta",DeltaTime);
         m_robot.TimeSlice(DeltaTime);
   }
+  void SimulatorTimeSlice()
+  {
+        const double CurrentTime = m_Timer.GetFPGATimestamp();
+        const double DeltaTime = CurrentTime - m_simLastTime;
+        m_simLastTime = CurrentTime;
+		//sanity check
+		//frc::SmartDashboard::PutNumber("time_delta",DeltaTime);
+		#ifdef __HasSimulation__
+        m_robot.SimulatorTimeSlice(DeltaTime);
+		#endif
+  }
   public:
   	#pragma region _public WPI callbacks_
     void AutonomousInit()
@@ -1624,6 +1650,15 @@ private:
 		TimeSlice();
 		m_LastMode=eTest;
 	}
+	void SimulationInit ()
+	{
+		//May need for WPI Simulations
+	}
+	void SimulationPeriodic ()
+	{
+		SimulatorTimeSlice();
+	}
+
 	#pragma endregion
 };
 
@@ -1664,6 +1699,14 @@ RobotAssem::RobotAssem()
   void RobotAssem::TestPeriodic()
   {
 	m_robot->TeleopPeriodic();
+  }
+  void RobotAssem::SimulationInit ()
+  {
+	  m_robot->SimulationInit();
+  }
+  void RobotAssem::SimulationPeriodic ()
+  {
+	  m_robot->SimulationPeriodic();
   }
 
 #pragma endregion

@@ -533,9 +533,7 @@ public:
 			m_Swivel[i].TimeSlice(d_time_s);
 			//These will hook their updates to here in m_Voltage
 		}
-		//The simulation already is hooked to m_Voltage its ready to simulate
-		//This step is skipped in real robot code as it physically happens instead
-		m_Simulation.TimeSlice(d_time_s);
+		//m_Simulation.TimeSlice(d_time_s); //was here now moved into its own call
 		//Now to update the odometry
 		m_Odometry.TimeSlice(d_time_s);
 		//We'll go ahead and maintain an internal state of the position and heading even if this gets managed
@@ -560,6 +558,12 @@ public:
 			//Almost there... the heading needs to be adjusted to fit in the range from -pi2 to pi2
 			m_current_heading = NormalizeRotation2(m_current_heading);  //written out for ease of debugging
 		}
+	}
+	void SimulatorTimeSlice(double dTime_s)
+	{
+		//The simulation already is hooked to m_Voltage its ready to simulate
+		//This call is skipped in real robot code as it physically happens instead
+		m_Simulation.TimeSlice(dTime_s);
 	}
 	#pragma region _mutators_
 	void SetLinearVelocity_local(double forward, double right)
@@ -682,6 +686,10 @@ void SwerveRobot::DriveToLocation(double north, double east, bool absolute, bool
 void SwerveRobot::TimeSlice(double d_time_s)
 {
 	m_SwerveRobot->TimeSlice(d_time_s);
+}
+void SwerveRobot::SimulatorTimeSlice(double dTime_s)
+{
+	m_SwerveRobot->SimulatorTimeSlice(dTime_s);
 }
 void SwerveRobot::Reset(double X, double Y, double heading)
 {

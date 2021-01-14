@@ -1,5 +1,7 @@
 #include <frc/WPILib.h>
 #include "WPI_Output.h"
+//reserved
+//#include "../../Properties/RegistryV1.h"
 
 namespace Module
 {
@@ -28,6 +30,8 @@ private:
             //keep as pointers to assign during init
             std::shared_ptr<frc::PWMVictorSPX> m_drive_motor;
             std::shared_ptr<frc::PWMVictorSPX> m_swivel_motor;
+            std::shared_ptr<frc::Encoder> m_driveEncoder;  //Note... need two channnels per encoder
+            std::shared_ptr<frc::Encoder> m_turningEncoder;
             size_t m_ThisSectionIndex;  //see section order (mostly used for diagnostics)
             void Init(size_t index,const Framework::Base::asset_manager *props=nullptr)
             {
@@ -38,6 +42,22 @@ private:
                 //be the property that section order represents
                 m_drive_motor=std::make_shared<PWMVictorSPX>(index);
                 m_swivel_motor=std::make_shared<PWMVictorSPX>(index+4);
+                m_driveEncoder=std::make_shared<Encoder>(index*2,index*2+1);
+                m_turningEncoder=std::make_shared<Encoder>((index+4)*2,(index+4)*2+1);
+
+                //TODO pull these from properties these are defaults from demo
+                const double kWheelRadius= 0.0508;  //2 inches
+                const int kEncoderResolution = 4096;
+
+                // Set the distance per pulse for the drive encoder. We can simply use the
+                // distance traveled for one rotation of the wheel divided by the encoder
+                // resolution.
+                m_driveEncoder->SetDistancePerPulse(2 * wpi::math::pi * kWheelRadius / kEncoderResolution);
+
+                // Set the distance (in this case, angle) per pulse for the turning encoder.
+                // This is the the angle through an entire rotation (2 * wpi::math::pi)
+                // divided by the encoder resolution.
+                m_turningEncoder->SetDistancePerPulse(2 * wpi::math::pi / kEncoderResolution);
             }
             void TimeSlice(double dTime_s, double drive_voltage, double swivel_voltage)
             {

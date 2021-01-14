@@ -41,6 +41,8 @@ public:
 
 	//Give entity a time slice to update its position
 	void TimeSlice(double d_time_s);
+	//If simulator is running this will get a slice
+	void SimulatorTimeSlice(double dTime_s);
 	//allows entity to be stopped and reset to a position and heading
 	void Reset(double X = 0.0, double Y = 0.0, double heading = 0.0);
 

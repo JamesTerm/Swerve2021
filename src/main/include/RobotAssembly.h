@@ -14,6 +14,8 @@ public:
   void DisabledPeriodic();
   void TestInit();
   void TestPeriodic();
+  void SimulationInit ();
+  void SimulationPeriodic ();
 private:
   std::shared_ptr<RobotAssem_Internal> m_robot;
 };
