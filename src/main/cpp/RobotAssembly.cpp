@@ -1034,7 +1034,7 @@ public:
 #include "Properties/RegistryV1.h"
 class Test_Swerve_Properties
 {
-private:
+protected:
 	#pragma region _member variables_
 	Framework::Base::asset_manager m_properties;
 	properties::script_loader m_script_loader;
@@ -1201,7 +1201,7 @@ private:
 			Reset();
 	}
 
-	void SetUpHooks(bool enable)
+	virtual void SetUpHooks(bool enable)
 	{
 		if (enable)
 		{
@@ -1368,7 +1368,7 @@ public:
 				m_Goal.GetGoal().Terminate();
 		}
 	}
-	void TimeSlice(double dTime_s)
+	virtual void TimeSlice(double dTime_s)
 	{
 		m_dTime_s = dTime_s;
 		//Grab kinematic velocities from controller
@@ -1443,6 +1443,50 @@ public:
 	}
 };
 #pragma endregion
+#pragma region _08 Main Assembly_
+//For now we inherit from TeleAuton V2, since we only need to link up the WPI output to the Swerve Robot
+//We may want to copy everything later, but doing it this way helps to read exactly what is changed
+#include "Modules/Output/WPI_Output.h"
+class Main_Assembly : public Test_Swerve_Properties
+{
+private:
+	Module::Output::WPI_Output m_WPI;
+
+	void SetUpHooks(bool enable)
+	{
+		Test_Swerve_Properties::SetUpHooks(enable);
+		//TODO link Swerve Robot to the physical odomety once it is ready
+		if (enable)
+		{
+			m_WPI.SetVoltageCallback(
+				[&]()
+				{
+					return m_robot.GetCurrentVoltages();
+				});
+			m_WPI.SetSimOdometry(
+				[&]()
+				{
+					return m_robot.GetCurrentVelocities();	
+				});
+		}
+		else
+		{
+			m_WPI.SetVoltageCallback(nullptr);
+		}
+	}
+	public:
+	void TimeSlice(double dTime_s)
+	{
+		Test_Swerve_Properties::TimeSlice(dTime_s);
+		m_WPI.TimeSlice(dTime_s);
+	}
+	void SimulatorTimeSlice(double dTime_s)
+	{
+		m_WPI.SimulatorTimeSlice(dTime_s);
+	}
+
+};
+#pragma endregion
 //We just pick what we test or use from here m_teleop declaration
 class RobotAssem_Internal
 {
@@ -1457,7 +1501,8 @@ private:
 	//enable auton methods for all tests beyond this point	
 	#define __HasAutonMethods__
 	//Test_Swerve_TeleAuton m_robot;  //06 tele auton version 1 (no property integration)
-	Test_Swerve_Properties m_robot; //07 tele auton version 2, properties and PID viewing when on
+	//Test_Swerve_Properties m_robot; //07 tele auton version 2, properties and PID viewing when on
+	Main_Assembly m_robot;
 	#pragma endregion
 
 	frc::Timer m_Timer; //use frc timer to take advantage of stepping in simulation (works fine for actual roboRIO too)
