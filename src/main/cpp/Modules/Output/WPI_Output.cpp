@@ -1,4 +1,9 @@
-#include <frc/WPILib.h>
+//Avoid the nasty compiler warning by only including what we need
+#include <frc/RobotBase.h>
+#include <frc/PWMVictorSPX.h>
+#include <frc/Encoder.h>
+#include <frc/simulation/EncoderSim.h>
+#include <wpi/math>
 #include "WPI_Output.h"
 //reserved
 //#include "../../Properties/RegistryV1.h"
@@ -32,6 +37,9 @@ private:
             std::shared_ptr<frc::PWMVictorSPX> m_swivel_motor;
             std::shared_ptr<frc::Encoder> m_driveEncoder;  //Note... need two channnels per encoder
             std::shared_ptr<frc::Encoder> m_turningEncoder;
+            //These are not instanciated in the real robot
+            std::shared_ptr<frc::sim::EncoderSim> m_driveEncoder_sim=nullptr;
+            std::shared_ptr<frc::sim::EncoderSim> m_turningEncoder_sim=nullptr;
             size_t m_ThisSectionIndex;  //see section order (mostly used for diagnostics)
             void Init(size_t index,const Framework::Base::asset_manager *props=nullptr)
             {
@@ -58,15 +66,27 @@ private:
                 // This is the the angle through an entire rotation (2 * wpi::math::pi)
                 // divided by the encoder resolution.
                 m_turningEncoder->SetDistancePerPulse(2 * wpi::math::pi / kEncoderResolution);
+                //Only instantiate if we are in a simulation
+                if (RobotBase::IsSimulation())
+                {
+                    m_driveEncoder_sim=std::make_shared<sim::EncoderSim>(*m_driveEncoder);
+                    m_turningEncoder_sim=std::make_shared<sim::EncoderSim>(*m_turningEncoder);
+                }
             }
             void TimeSlice(double dTime_s, double drive_voltage, double swivel_voltage)
             {
                 m_drive_motor->Set(drive_voltage);
                 m_swivel_motor->Set(swivel_voltage);
             }
-            void SimulatorTimeSlice(double dTime_s) 
+            void SimulatorTimeSlice(double dTime_s, double drive_velocity, double swivel_distance) 
             {
-                //TODO
+                //This will have late binding, so we check for null
+                if (m_driveEncoder_sim)
+                {
+                  m_driveEncoder_sim->SetRate(drive_velocity);
+                  //assert turning sim is set
+                  m_turningEncoder_sim->SetDistance(swivel_distance);
+                }
             }
         };
 
@@ -90,7 +110,9 @@ private:
         void SimulatorTimeSlice(double dTime_s) 
         {
             for (size_t i=0;i<4;i++)
-                Module[i].SimulatorTimeSlice(dTime_s);
+                Module[i].SimulatorTimeSlice(dTime_s,
+                m_pParent->m_OurSimCallback().Velocity.AsArray[i],
+                m_pParent->m_OurSimCallback().Velocity.AsArray[i+4]);
         }
     };
     WheelModules m_WheelModule=this;
