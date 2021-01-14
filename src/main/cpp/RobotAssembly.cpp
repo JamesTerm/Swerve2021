@@ -1462,7 +1462,7 @@ class Main_Assembly : public Test_Swerve_Properties
 {
 private:
 	Module::Output::WPI_Output m_WPI;
-
+	//#define __BypassPhysicalOdometry__
 	//constructor can't virtually call this so, we give it it's own name an manage it here
 	void SetUpHooks_main(bool enable)
 	{
@@ -1478,13 +1478,22 @@ private:
 			m_WPI.SetSimOdometry(
 				[&]()
 				{
-					return m_robot.GetCurrentVelocities();	
+					return m_robot.GetSimulatedVelocities();	
 				});
+			//For simulation we can bypass this and use our own internal simulation
+			#ifndef __BypassPhysicalOdometry__
+			m_robot.SetPhysicalOdometry(
+				[&]()
+				{
+					return m_WPI.GetCurrentVelocities();
+				});
+			#endif
 		}
 		else
 		{
 			m_WPI.SetVoltageCallback(nullptr);
 			m_WPI.SetSimOdometry(nullptr);
+			m_robot.SetPhysicalOdometry(nullptr);
 		}
 	}
 	public:

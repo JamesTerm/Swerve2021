@@ -73,10 +73,16 @@ private:
                     m_turningEncoder_sim=std::make_shared<sim::EncoderSim>(*m_turningEncoder);
                 }
             }
-            void TimeSlice(double dTime_s, double drive_voltage, double swivel_voltage)
+            void TimeSlice(double dTime_s, double drive_voltage, double swivel_voltage, Robot::SwerveVelocities &physicalOdometry)
             {
                 m_drive_motor->Set(drive_voltage);
                 m_swivel_motor->Set(swivel_voltage);
+                //now to update our odometry
+                //for now this is an exact read, but will need to be translated from a real encoder
+                //If the WPI simulation solves this we can simulate that as well; otherwise we can
+                //add the conversions ourself.
+                physicalOdometry.Velocity.AsArray[m_ThisSectionIndex]=m_driveEncoder->GetRate();
+                physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=m_turningEncoder->GetDistance();
             }
             void SimulatorTimeSlice(double dTime_s, double drive_velocity, double swivel_distance) 
             {
@@ -105,7 +111,8 @@ private:
             for (size_t i=0;i<4;i++)
                 Module[i].TimeSlice(dTime_s,
                 m_pParent->m_VoltageCallback().Velocity.AsArray[i],
-                m_pParent->m_VoltageCallback().Velocity.AsArray[i+4]);
+                m_pParent->m_VoltageCallback().Velocity.AsArray[i+4],
+                m_pParent->m_PhysicalOdometry);
         }
         void SimulatorTimeSlice(double dTime_s) 
         {

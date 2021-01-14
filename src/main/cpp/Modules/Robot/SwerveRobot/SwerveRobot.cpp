@@ -69,6 +69,7 @@ private:
 	std::function <double()> m_ExternGetCurrentHeading = nullptr;
 	std::function<SwerveRobot::PID_Velocity_proto> m_PID_Velocity_callback = Default_Velocity_PID_Monitor;
 	std::function<SwerveRobot::PID_Position_proto> m_PID_Position_callback = Default_Position_PID_Monitor;
+	std::function<Robot::SwerveVelocities ()> m_PhysicalOdometry=nullptr;
 #pragma endregion
 	void SetHooks(bool enable)
 	{
@@ -100,7 +101,12 @@ private:
 				return ret;
 			});
 			HOOK(m_Odometry.SetOdometryHeadingCallback,, return GetCurrentHeading());
-			HOOK(m_Odometry.SetOdometryCallback,, return m_Simulation.GetCurrentVelocities());
+			//I could use the macro, but I can see this one needing a break point from time-to-time
+			m_Odometry.SetOdometryCallback(
+				[&]()
+				{
+					return m_PhysicalOdometry?m_PhysicalOdometry():m_Simulation.GetCurrentVelocities();
+				});
 			HOOK(m_Simulation.SetVoltageCallback,, return m_Voltage);
 			#pragma region _Drive hooks_
 			//These have to be unrolled unfortunately
@@ -604,6 +610,10 @@ public:
 	{
 		return m_Odometry.GetCurrentVelocities();
 	}
+	const SwerveVelocities &GetSimulatedVelocities() const
+	{
+		return m_Simulation.GetCurrentVelocities();
+	}
 	const SwerveVelocities &GetCurrentVoltages() const
 	{
 		return m_Voltage;
@@ -651,7 +661,10 @@ public:
 	{
 		m_PID_Position_callback = callback;
 	}
-
+	void SetPhysicalOdometry(std::function<Robot::SwerveVelocities ()> callback)
+	{
+		m_PhysicalOdometry=callback;
+	}
 	#pragma endregion
 };
 #pragma region _wrapper methods_
@@ -727,9 +740,17 @@ void SwerveRobot::SetExternal_Position_PID_Monitor_Callback(std::function<PID_Po
 {
 	m_SwerveRobot->SetExternal_Position_PID_Monitor_Callback(callback);
 }
+void SwerveRobot::SetPhysicalOdometry(std::function<Robot::SwerveVelocities ()> callback)
+{
+	m_SwerveRobot->SetPhysicalOdometry(callback);
+}
 const SwerveVelocities &SwerveRobot::GetCurrentVelocities() const
 {
 	return m_SwerveRobot->GetCurrentVelocities();
+}
+const SwerveVelocities &SwerveRobot::GetSimulatedVelocities() const
+{
+	return m_SwerveRobot->GetSimulatedVelocities();
 }
 const SwerveVelocities &SwerveRobot::GetCurrentVoltages() const
 {
