@@ -13,8 +13,8 @@ namespace Module
 	namespace Output
 	{
 
-//Straight example to show how it works
-class SimplePWM_Example
+//The implementation here is direct and works with the simulation
+class WheelModule_Interface
 {
 private:
     Robot::SwerveVelocities m_PhysicalOdometry;
@@ -41,9 +41,114 @@ private:
             std::shared_ptr<frc::sim::EncoderSim> m_driveEncoder_sim=nullptr;
             std::shared_ptr<frc::sim::EncoderSim> m_turningEncoder_sim=nullptr;
             size_t m_ThisSectionIndex;  //see section order (mostly used for diagnostics)
+
+            class EncoderTranslation_Direct
+            {
+                #pragma region _Description_
+                //This class helps separate the conversion necessary between the encoder readings we get and
+                //the readings we need for the odometry, this class sets up the environment directly so that
+                //the simulation can use it as a base line, then we derive from it with the actual conversions
+                //so both cases can be tested
+                #pragma endregion
+            protected:
+                const Framework::Base::asset_manager *m_props;
+                __inline double GetDistancePerPulse_Default()
+                {
+                    //keeping this property free for this class
+                    //Distance per pulse has to be set properly for real encoder to give radians, the encoder resolution
+                    //represents how many pulses per full turn, or in angles it depends on how the vendor publishes it
+                    //WPI's example assumes it is for a full turn where 2 pi converts to radians
+                    const double kEncoderResolution = 4096.0;
+                    return Pi2 / kEncoderResolution;
+                }
+            public:
+                void Init(const Framework::Base::asset_manager *props)
+                {
+                    m_props=props;
+                }
+                virtual double Drive_GetDistancePerPulse(size_t wheelSection)
+                {
+                    return GetDistancePerPulse_Default();
+                }
+                virtual double Swivel_GetDistancePerPulse(size_t wheelSection)
+                {
+                    return GetDistancePerPulse_Default();
+                }
+                virtual double Drive_ReadEncoderToLinearVelocity(double encoderReading,size_t wheelSection)
+                {
+                    //Linear Velocity is in meters per second, encoder reading is in radians
+                    return encoderReading;
+                }
+                virtual double Drive_SimLinearVelocityToEncoderWrite(double linearVelocity,size_t wheelSection)
+                {
+                    //For simulation only and is the inverse computation of the read
+                    return linearVelocity;
+                }
+                virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection)
+                {
+                    //Both encoder reading and position are in radians, position is normalized from -pi to pi
+                    //it can work within reason from -2pi to 2pi, but should not exceed this
+                    //encoder reading has no normalization, but shouldn't be to far off, it starts with zero and can be subjected to
+                    //multiple turns in any direction, typically this shouldn't be more than 5 turns so a while loop on the normalizaion
+                    //is fine but to be safe I'd set a limit and trigger a drive disable if it is exceeded, if this fails driving on
+                    //a faulty turned wheel can damage robot, so this would be the correct course of action.
+                    //The encoder's radians can have the gear reduction in it, but it may be easier to keep like the example, so that 
+                    //encoder can be tested by hand, and apply gear reduction here.
+                    return encoderReading;
+                }
+                virtual double Swivel_SimPositionToEncoderWrite(double position,size_t wheelSection)
+                {
+                    return position;
+                }
+            };
+            class EncoderTranslation : public EncoderTranslation_Direct
+            {
+            public:
+                virtual double Drive_GetDistancePerPulse(size_t wheelSection)
+                {
+                    //TODO
+                    return GetDistancePerPulse_Default();
+                }
+                virtual double Swivel_GetDistancePerPulse(size_t wheelSection)
+                {
+                    //TODO
+                    return GetDistancePerPulse_Default();
+                }
+
+                virtual double Drive_ReadEncoderToLinearVelocity(double encoderReading,size_t wheelSection)
+                {
+                    //Since we can assume radians, we just need to factor in the gear reduction and wheel radius (in meters)
+                    //TODO
+                    return encoderReading;
+                }
+                virtual double Drive_SimLinearVelocityToEncoderWrite(double linearVelocity,size_t wheelSection)
+                {
+                    //Factor in the reciprocal radius (1/radius is like divide) and reciprocal gear reduction
+                    //Note: Even though compilers are smart these days, to multiply makes it easy to ensure no
+                    //division of zero
+                    //TODO
+                    return linearVelocity;
+                }
+                virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection)
+                {
+                    //Factor in the gear reduction and normalize, for now I'll just assert() the limit
+                    //but we should really push a smartdashboard checkbox to disable drive
+                    //TODO
+                    return encoderReading;
+                }
+                virtual double Swivel_SimPositionToEncoderWrite(double position,size_t wheelSection)
+                {
+                    //Factor inverse gear reduction, we are normalized so we needn't worry about this
+                    //TODO
+                    return position;
+                }
+            };
+
+            EncoderTranslation m_Converter;
             void Init(size_t index,const Framework::Base::asset_manager *props=nullptr)
             {
                 m_ThisSectionIndex=index;
+                m_Converter.Init(props); //This must happen before getting the distance per pulse below
                 using namespace frc;
                 //Note here we can use the asset manager to switch motor assignments
                 //the index is always the section order, but the motor to use can
@@ -53,19 +158,30 @@ private:
                 m_driveEncoder=std::make_shared<Encoder>(index*2,index*2+1);
                 m_turningEncoder=std::make_shared<Encoder>((index+4)*2,(index+4)*2+1);
 
-                //TODO pull these from properties these are defaults from demo
-                const double kWheelRadius= 0.0508;  //2 inches
-                const int kEncoderResolution = 4096;
+                #pragma region _WPI example_
+                //Note: This is the example these are pulled from properties
+                //const double kWheelRadius= 0.0508;  //2 inches
+                //const int kEncoderResolution = 4096;
 
+                //Example code---
                 // Set the distance per pulse for the drive encoder. We can simply use the
                 // distance traveled for one rotation of the wheel divided by the encoder
                 // resolution.
-                m_driveEncoder->SetDistancePerPulse(2 * wpi::math::pi * kWheelRadius / kEncoderResolution);
+                //m_driveEncoder->SetDistancePerPulse(2 * wpi::math::pi * kWheelRadius / kEncoderResolution);
+                //---------------------------------------------------------------------------
+                //Let's not factor in the wheel radius here because we should not be dependant on robot
+                //properties at this level, aside from this the example didn't factor in the gear reduction
+                //We can factor both later down, just a simple unit of radians will suffice
 
                 // Set the distance (in this case, angle) per pulse for the turning encoder.
                 // This is the angle through an entire rotation (2 * wpi::math::pi)
                 // divided by the encoder resolution.
-                m_turningEncoder->SetDistancePerPulse(2 * wpi::math::pi / kEncoderResolution);
+                //m_turningEncoder->SetDistancePerPulse(2 * wpi::math::pi / kEncoderResolution);
+                #pragma endregion
+
+                m_driveEncoder->SetDistancePerPulse(m_Converter.Drive_GetDistancePerPulse(m_ThisSectionIndex));
+                m_turningEncoder->SetDistancePerPulse(m_Converter.Swivel_GetDistancePerPulse(m_ThisSectionIndex));
+
                 //Only instantiate if we are in a simulation
                 if (RobotBase::IsSimulation())
                 {
@@ -81,24 +197,26 @@ private:
                 //for now this is an exact read, but will need to be translated from a real encoder
                 //If the WPI simulation solves this we can simulate that as well; otherwise we can
                 //add the conversions ourself.
-                physicalOdometry.Velocity.AsArray[m_ThisSectionIndex]=m_driveEncoder->GetRate();
-                physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=m_turningEncoder->GetDistance();
+                physicalOdometry.Velocity.AsArray[m_ThisSectionIndex]=
+                    m_Converter.Drive_ReadEncoderToLinearVelocity(m_driveEncoder->GetRate(),m_ThisSectionIndex);
+                physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
+                    m_Converter.Swivel_ReadEncoderToPosition(m_turningEncoder->GetDistance(),m_ThisSectionIndex);
             }
             void SimulatorTimeSlice(double dTime_s, double drive_velocity, double swivel_distance) 
             {
                 //This will have late binding, so we check for null
                 if (m_driveEncoder_sim)
                 {
-                  m_driveEncoder_sim->SetRate(drive_velocity);
+                  m_driveEncoder_sim->SetRate(m_Converter.Drive_SimLinearVelocityToEncoderWrite(drive_velocity,m_ThisSectionIndex));
                   //assert turning sim is set
-                  m_turningEncoder_sim->SetDistance(swivel_distance);
+                  m_turningEncoder_sim->SetDistance(m_Converter.Swivel_SimPositionToEncoderWrite(swivel_distance,m_ThisSectionIndex));
                 }
             }
         };
 
         WheelModule Module[4];
-        SimplePWM_Example *m_pParent;
-        WheelModules(SimplePWM_Example *parent) : m_pParent(parent)
+        WheelModule_Interface *m_pParent;
+        WheelModules(WheelModule_Interface *parent) : m_pParent(parent)
         {}
         void Init(const Framework::Base::asset_manager *props=nullptr)
         {
@@ -153,7 +271,7 @@ public:
 class WPI_Output_Internal
 {
 private:
-    SimplePWM_Example m_Implementation;
+    WheelModule_Interface m_Implementation;
 public:
     void Init(const Framework::Base::asset_manager *props=nullptr)
     {
