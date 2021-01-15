@@ -33,6 +33,7 @@ namespace registry_v1
 	//Entity properties
 	Rg_(Drive_WheelBase_in)
 	Rg_(Drive_TrackWidth_in)
+	Rg_(Drive_WheelDiameter_in)
 
 	//Motion 2D properties
 	Rg_(Motion2D_max_speed_linear)

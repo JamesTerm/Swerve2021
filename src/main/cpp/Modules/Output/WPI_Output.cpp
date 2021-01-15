@@ -5,8 +5,8 @@
 #include <frc/simulation/EncoderSim.h>
 #include <wpi/math>
 #include "WPI_Output.h"
-//reserved
-//#include "../../Properties/RegistryV1.h"
+//use properties for encoder reading conversions
+#include "../../Properties/RegistryV1.h"
 
 namespace Module
 {
@@ -52,7 +52,7 @@ private:
                 #pragma endregion
             protected:
                 const Framework::Base::asset_manager *m_props;
-                __inline double GetDistancePerPulse_Default()
+                __inline double GetDistancePerPulse_Default() const
                 {
                     //keeping this property free for this class
                     //Distance per pulse has to be set properly for real encoder to give radians, the encoder resolution
@@ -66,25 +66,25 @@ private:
                 {
                     m_props=props;
                 }
-                virtual double Drive_GetDistancePerPulse(size_t wheelSection)
+                virtual double Drive_GetDistancePerPulse(size_t wheelSection) const
                 {
                     return GetDistancePerPulse_Default();
                 }
-                virtual double Swivel_GetDistancePerPulse(size_t wheelSection)
+                virtual double Swivel_GetDistancePerPulse(size_t wheelSection) const
                 {
                     return GetDistancePerPulse_Default();
                 }
-                virtual double Drive_ReadEncoderToLinearVelocity(double encoderReading,size_t wheelSection)
+                virtual double Drive_ReadEncoderToLinearVelocity(double encoderReading,size_t wheelSection) const
                 {
                     //Linear Velocity is in meters per second, encoder reading is in radians
                     return encoderReading;
                 }
-                virtual double Drive_SimLinearVelocityToEncoderWrite(double linearVelocity,size_t wheelSection)
+                virtual double Drive_SimLinearVelocityToEncoderWrite(double linearVelocity,size_t wheelSection) const
                 {
                     //For simulation only and is the inverse computation of the read
                     return linearVelocity;
                 }
-                virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection)
+                virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection) const
                 {
                     //Both encoder reading and position are in radians, position is normalized from -pi to pi
                     //it can work within reason from -2pi to 2pi, but should not exceed this
@@ -96,51 +96,110 @@ private:
                     //encoder can be tested by hand, and apply gear reduction here.
                     return encoderReading;
                 }
-                virtual double Swivel_SimPositionToEncoderWrite(double position,size_t wheelSection)
+                virtual double Swivel_SimPositionToEncoderWrite(double position,size_t wheelSection) const
                 {
                     return position;
                 }
             };
             class EncoderTranslation : public EncoderTranslation_Direct
             {
-            public:
-                virtual double Drive_GetDistancePerPulse(size_t wheelSection)
-                {
-                    //TODO
-                    return GetDistancePerPulse_Default();
-                }
-                virtual double Swivel_GetDistancePerPulse(size_t wheelSection)
-                {
-                    //TODO
-                    return GetDistancePerPulse_Default();
-                }
+            protected:
+                #define GetPropertyName(x)\
+                    using namespace properties::registry_v1;\
+                    std::string Name = GetPrefix(wheelSection, IsSwivel);\
+                    std::string CommonName = GetCommonPrefix(wheelSection); \
+                    Name += #x, CommonName += #x;
 
-                virtual double Drive_ReadEncoderToLinearVelocity(double encoderReading,size_t wheelSection)
+                const char* GetPrefix(size_t index, bool IsSwivel) const
+                {
+                    using namespace properties::registry_v1;
+                    //form our prefix, it will use the naming convention in Vehicle Drive.h
+                    const char* const prefix_table[2][4] =
+                    {
+                        {csz_sFL_,csz_sFR_,csz_sRL_,csz_sRR_},
+                        {csz_aFL_,csz_aFR_,csz_aRL_,csz_aRR_}
+                    };
+                    assert(index < 4);
+                    const char* const prefix = prefix_table[IsSwivel ? 1 : 0][index];
+                    return prefix;
+                }
+                const char* GetCommonPrefix(bool IsSwivel) const
+                {
+                    using namespace properties::registry_v1;
+                    const char* prefix = IsSwivel ? csz_CommonSwivel_ : csz_CommonDrive_;
+                    return prefix;
+                }
+                double GetDistancePerPulse(size_t wheelSection, bool IsSwivel) const
+                {
+                    const double kEncoderResolution = 4096.0 / 4;
+                    GetPropertyName(Rotary_EncoderPulsesPerRevolution);
+                    //This has the common nested as the default, so basically the individual property will return if present
+                    //then the common property, then finally the default constant
+                    const double enc_resolution= m_props->get_number(Name.c_str(), m_props->get_number(CommonName.c_str(),kEncoderResolution));
+                    return Pi2 / kEncoderResolution;
+                }
+                double GetGearReduction(size_t wheelSection,bool IsSwivel) const
+                {
+                    GetPropertyName(Rotary_EncoderToRS_Ratio);
+                    //Gear reduction driving over driven (e.g. driven is the bigger gear)
+                    return m_props->get_number(Name.c_str(), m_props->get_number(CommonName.c_str(), 1.0));
+                }
+                double GetIsReversed(size_t wheelSection, bool IsSwivel) const
+                {
+                    // returns -1 if reversed
+                    GetPropertyName(Rotary_EncoderToRS_Ratio);
+                    //Gear reduction driving over driven (e.g. driven is the bigger gear)
+                    return m_props->get_bool(Name.c_str(), m_props->get_bool(CommonName.c_str(), false)) ? -1.0 : 1.0;
+                }
+                double GetWheelRadius() const
+                {
+                    using namespace properties::registry_v1;
+                    return Inches2Meters(m_props->get_number(csz_Drive_WheelDiameter_in,4.0)) * 0.5;
+                }
+            public:
+                virtual double Drive_GetDistancePerPulse(size_t wheelSection) const
+                {
+                    return GetDistancePerPulse(wheelSection,false);
+                }
+                virtual double Swivel_GetDistancePerPulse(size_t wheelSection) const
+                {
+                    return GetDistancePerPulse(wheelSection, true);
+                }
+                //TODO: we may want to add Kalman filter and averager for the encoder position, but for now I'll leave it
+                //as it probably will not be too noisy given its reduction (unlike a potentiometer)
+                virtual double Drive_ReadEncoderToLinearVelocity(double encoderReading,size_t wheelSection) const
                 {
                     //Since we can assume radians, we just need to factor in the gear reduction and wheel radius (in meters)
-                    //TODO
-                    return encoderReading;
+                    return encoderReading * GetGearReduction(wheelSection,false) * GetWheelRadius();
                 }
-                virtual double Drive_SimLinearVelocityToEncoderWrite(double linearVelocity,size_t wheelSection)
+                virtual double Drive_SimLinearVelocityToEncoderWrite(double linearVelocity,size_t wheelSection) const
                 {
                     //Factor in the reciprocal radius (1/radius is like divide) and reciprocal gear reduction
                     //Note: Even though compilers are smart these days, to multiply makes it easy to ensure no
                     //division of zero
-                    //TODO
-                    return linearVelocity;
+                    return linearVelocity * (1.0/GetGearReduction(wheelSection, false)) * (1.0/GetWheelRadius());
                 }
-                virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection)
+                inline double NormalizeRotation2(double Rotation) const
+                {
+                    //we should really push a SmartDashboard check-box to disable drive
+                    assert(fabs(Rotation) < Pi2 * 20); //should be less than 20 turns!  If it's greater something is terribly wrong!
+                    //const double Pi2 = M_PI * 2.0;
+                    //Normalize the rotation
+                    while (Rotation > M_PI)
+                        Rotation -= Pi2;
+                    while (Rotation < -M_PI)
+                        Rotation += Pi2;
+                    return Rotation;
+                }
+                virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection) const
                 {
                     //Factor in the gear reduction and normalize, for now I'll just assert() the limit
-                    //but we should really push a smartdashboard checkbox to disable drive
-                    //TODO
-                    return encoderReading;
+                    return  NormalizeRotation2(encoderReading * GetGearReduction(wheelSection,true));
                 }
-                virtual double Swivel_SimPositionToEncoderWrite(double position,size_t wheelSection)
+                virtual double Swivel_SimPositionToEncoderWrite(double position,size_t wheelSection) const
                 {
                     //Factor inverse gear reduction, we are normalized so we needn't worry about this
-                    //TODO
-                    return position;
+                    return position * (1.0 / GetGearReduction(wheelSection, true));
                 }
             };
 

@@ -461,7 +461,7 @@ private:
 			//Note: removed in Encoder Simulator v3
 			//curve_voltage =
 			//{t4 = 3.1199; t3 = -4.4664; t2 = 2.2378; t1 = 0.1222; c = 0};
-			const double encoder_pulses_per_revolution = 560 / 4;
+			const double encoder_pulses_per_revolution = 1024 / 4;  //CTR magnetic encoder 1024 cpr
 			const double encoder_to_wheel_ratio = 1.0;
 			const bool encoder_reversed_wheel = false;
 			const double max_speed = DriveGearSpeed;
@@ -485,7 +485,9 @@ private:
 			const double tolerance = 0.03;
 			const int tolerance_count = 1;
 			const double voltage_multiply = 1.0;			//May be reversed
+			const double encoder_pulses_per_revolution = 1024 / 4;  //CTR magnetic encoder 1024 cpr
 			const double encoder_to_wheel_ratio = 1.0;
+			const bool encoder_reversed_wheel = false;
 			//In radians using 1.5 rpm
 			const double max_speed = 9.4;
 			const double accel = 10.0;						//We may indeed have a two button solution(match with max accel)
@@ -640,7 +642,7 @@ private:
 			//Rotary--------------------------
 			PUT_NUMBER(Rotary_VoltageScaler, val.voltage_multiply);
 			PUT_NUMBER(Rotary_EncoderToRS_Ratio, val.encoder_to_wheel_ratio);
-			//PUT_NUMBER(Rotary_EncoderPulsesPerRevolution, val.encoder_pulses_per_revolution);
+			PUT_NUMBER(Rotary_EncoderPulsesPerRevolution, val.encoder_pulses_per_revolution);
 			PUT_BOOL(Rotary_Arm_GainAssist_UsePID_Up_Only, val.use_pid_up_only);
 			//PUT_NUMBER(Rotary_PID)  //double[3]... append _p _i _d to the name for each element
 			PUT_NUMBER_suffix(Rotary_Arm_GainAssist_PID_Up, val._pid_swivel.p, _p);
