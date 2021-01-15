@@ -35,9 +35,9 @@ private:
             //keep as pointers to assign during init
             std::shared_ptr<frc::PWMVictorSPX> m_drive_motor;
             std::shared_ptr<frc::PWMVictorSPX> m_swivel_motor;
-            std::shared_ptr<frc::Encoder> m_driveEncoder;  //Note... need two channnels per encoder
+            std::shared_ptr<frc::Encoder> m_driveEncoder;  //Note... need two channels per encoder
             std::shared_ptr<frc::Encoder> m_turningEncoder;
-            //These are not instanciated in the real robot
+            //These are not instantiated in the real robot
             std::shared_ptr<frc::sim::EncoderSim> m_driveEncoder_sim=nullptr;
             std::shared_ptr<frc::sim::EncoderSim> m_turningEncoder_sim=nullptr;
             size_t m_ThisSectionIndex;  //see section order (mostly used for diagnostics)
@@ -63,7 +63,7 @@ private:
                 m_driveEncoder->SetDistancePerPulse(2 * wpi::math::pi * kWheelRadius / kEncoderResolution);
 
                 // Set the distance (in this case, angle) per pulse for the turning encoder.
-                // This is the the angle through an entire rotation (2 * wpi::math::pi)
+                // This is the angle through an entire rotation (2 * wpi::math::pi)
                 // divided by the encoder resolution.
                 m_turningEncoder->SetDistancePerPulse(2 * wpi::math::pi / kEncoderResolution);
                 //Only instantiate if we are in a simulation

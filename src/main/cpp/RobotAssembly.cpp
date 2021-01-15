@@ -6,7 +6,7 @@
 #include "RobotAssembly.h"
 
 #pragma region _description_
-//So in here I'll keep various assmeblies to use, these are in order of how they add on and get more developed
+//So in here I'll keep various assemblies to use, these are in order of how they add on and get more developed
 //the same is true for the include files as they are mostly independent and can be added in the order of 
 //development.  From a birds eye view, we start with just teleop and just the joystick, and then integrate into 
 //kinematics the output starts with the SmartDashboard, and some viewer for it on simulations, and finally
@@ -109,7 +109,7 @@ public:
 };
 #pragma endregion
 #pragma region _03 Test_Swerve_Entity_Joystick Tele V1_
-//3. Add simple form of motion control (does not handle change of direction or centrepetal forces)
+//3. Add simple form of motion control (does not handle change of direction or centripetal forces)
 #include "Modules/Robot/Entity2D/Entity2D.h"
 #include "Modules/Robot/MotionControl2D_simple/MotionControl2D.h"
 
@@ -1467,7 +1467,7 @@ private:
 	void SetUpHooks_main(bool enable)
 	{
 		Test_Swerve_Properties::SetUpHooks(enable);
-		//TODO link Swerve Robot to the physical odomety once it is ready
+		//TODO link Swerve Robot to the physical odometry once it is ready
 		if (enable)
 		{
 			m_WPI.SetVoltageCallback(
@@ -1507,7 +1507,7 @@ private:
 	}
 	void Init()
 	{
-		//call predessor first to setup the properties
+		//call predecessor first to setup the properties
 		Test_Swerve_Properties::Init();
 		m_WPI.Init(&m_properties);
 	}
@@ -1600,7 +1600,7 @@ private:
         #if 1
         const double DeltaTime = CurrentTime - m_LastTime;
         #else
-        const double DeltaTime=0.01;  //It's best to use sythetic time for simulation to step through code
+        const double DeltaTime=0.01;  //It's best to use synthetic time for simulation to step through code
         #endif
         m_LastTime = CurrentTime;
 		//sanity check

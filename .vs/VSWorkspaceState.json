@@ -6,8 +6,10 @@
     "\\src\\main\\cpp",
     "\\src\\main\\cpp\\Modules",
     "\\src\\main\\cpp\\Modules\\Input",
-    "\\src\\main\\cpp\\Modules\\Input\\wpi_Joystick_Controller"
+    "\\src\\main\\cpp\\Modules\\Input\\AI_Input",
+    "\\src\\main\\cpp\\Modules\\Input\\wpi_Joystick_Controller",
+    "\\src\\main\\include"
   ],
-  "SelectedNode": "\\src\\main\\cpp\\Modules\\Input\\wpi_Joystick_Controller\\wpi_Joystick.cpp",
+  "SelectedNode": "\\src\\main\\cpp\\Modules\\Input\\AI_Input\\AI_Input_Example.cpp",
   "PreviewInSolutionExplorer": false
 }
