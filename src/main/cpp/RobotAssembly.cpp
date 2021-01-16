@@ -1094,6 +1094,8 @@ protected:
 		const Entity2D::Vector2D linear_velocity = entity.GetCurrentVelocity();
 		Vec2D velocity_normalized(linear_velocity.x, linear_velocity.y);
 		double magnitude = velocity_normalized.normalize();
+		SmartDashboard::PutNumber("linear_velocity_x", linear_velocity.x);
+		SmartDashboard::PutNumber("linear_velocity_y", linear_velocity.y);
 		//Entity variables-------------------------------------------
 		SmartDashboard::PutNumber("Velocity", Meters2Feet(magnitude));
 		SmartDashboard::PutNumber("Rotation Velocity", m_Entity.GetCurrentAngularVelocity());
