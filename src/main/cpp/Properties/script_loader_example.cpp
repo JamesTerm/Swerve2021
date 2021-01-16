@@ -683,7 +683,13 @@ private:
 		#undef PUT_NUMBER
 		#undef PUT_BOOL
 	}
-	void Test_Controls_Airflo()
+	enum Controller
+	{
+		eAirFlo,
+		eLogitech,
+		eKeyboard
+	};
+	void Test_Controls(Controller joystick)
 	{
 		#pragma region _setup put vars_
 		Framework::Base::asset_manager& assets = *m_assets;
@@ -701,7 +707,25 @@ private:
 		#pragma endregion
 		{
 			prefix = csz_AxisTurn_;
-			PUT_NUMBER(Control_Key, 5.0);
+			switch (joystick)
+			{
+			case eAirFlo:
+				PUT_NUMBER(Control_Key, 5.0);
+				break;
+			//Not needed wpi joystick
+			// case eLogitech:
+			// 	PUT_NUMBER(Control_Key, 3.0);
+			// 	break;
+			case eKeyboard:
+				//For now we just assign it to the next port so we can avoid having to change assignments
+				PUT_NUMBER(Control_Joy,1.0);
+				prefix=csz_AxisForward_;
+				PUT_NUMBER(Control_Joy,1.0);
+				prefix=csz_AxisStrafe_;
+				PUT_NUMBER(Control_Joy,1.0);
+				break;
+			}
+		
 			PUT_NUMBER(Control_CurveIntensity, 3.0);
 		}
 	}
@@ -710,6 +734,9 @@ public:
 	{
 		using namespace properties::registry_v1;
 		m_assets = &assets;
+		//Note: tuning off bypass you must load one of the robots as the simulation uses the same properties
+		//as the common wheel and swivel, the defaults of the encoder and potentiometer are currently not 
+		//compatible, as the bypass simulation option itself is
 		#if 1
 		assets.put_bool(csz_Build_bypass_simulation, false);
 		#else
@@ -718,11 +745,9 @@ public:
 		//TestIndivualWheels();
 		//TestCurivator();
 		TestAndromeda();
-		//This customizes to my AirFlo controller, add your own controller
+		//This customizes the controller, add your own controller
 		//especially if your axis assignments need to change
-		//Note: The simulation can collapse the port mapping, so you may be able to do without the port change, but
-		//the other controls like sensitivity should still be useful
-		//Test_Controls_Airflo();
+		//Test_Controls(eKeyboard);
 	}
 };
 
