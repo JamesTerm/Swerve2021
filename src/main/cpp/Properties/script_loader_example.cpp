@@ -462,7 +462,7 @@ private:
 			//curve_voltage =
 			//{t4 = 3.1199; t3 = -4.4664; t2 = 2.2378; t1 = 0.1222; c = 0};
 			const double encoder_pulses_per_revolution = 1024 / 4;  //CTR magnetic encoder 1024 cpr
-			const double encoder_to_wheel_ratio = 1.0;
+			const double encoder_to_wheel_ratio = 1.0/9.0;  //should use 9 and not 7 for current draw
 			const bool encoder_reversed_wheel = false;
 			const double max_speed = DriveGearSpeed;
 			const double accel = 10.0;						//We may indeed have a two button solution(match with max accel)
@@ -486,7 +486,7 @@ private:
 			const int tolerance_count = 1;
 			const double voltage_multiply = 1.0;			//May be reversed
 			const double encoder_pulses_per_revolution = 1024 / 4;  //CTR magnetic encoder 1024 cpr
-			const double encoder_to_wheel_ratio = 1.0;
+			const double encoder_to_wheel_ratio = 1.0/81.0;  //assume encoder is on stage closest to shaft
 			const bool encoder_reversed_wheel = false;
 			//In radians using 1.5 rpm
 			const double max_speed = 9.4;

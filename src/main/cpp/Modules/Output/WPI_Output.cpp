@@ -107,7 +107,7 @@ private:
                 #define GetPropertyName(x)\
                     using namespace properties::registry_v1;\
                     std::string Name = GetPrefix(wheelSection, IsSwivel);\
-                    std::string CommonName = GetCommonPrefix(wheelSection); \
+                    std::string CommonName = GetCommonPrefix(IsSwivel); \
                     Name += #x, CommonName += #x;
 
                 const char* GetPrefix(size_t index, bool IsSwivel) const
@@ -144,19 +144,19 @@ private:
                     //Gear reduction driving over driven (e.g. driven is the bigger gear)
                     return m_props->get_number(Name.c_str(), m_props->get_number(CommonName.c_str(), 1.0));
                 }
-                double GetIsReversed(size_t wheelSection, bool IsSwivel) const
-                {
-                    // returns -1 if reversed
-                    GetPropertyName(Rotary_EncoderToRS_Ratio);
-                    //Gear reduction driving over driven (e.g. driven is the bigger gear)
-                    return m_props->get_bool(Name.c_str(), m_props->get_bool(CommonName.c_str(), false)) ? -1.0 : 1.0;
-                }
                 double GetWheelRadius() const
                 {
                     using namespace properties::registry_v1;
                     return Inches2Meters(m_props->get_number(csz_Drive_WheelDiameter_in,4.0)) * 0.5;
                 }
             public:
+                bool GetIsReversed(size_t wheelSection, bool IsSwivel) const
+                {
+                    // returns -1 if reversed
+                    GetPropertyName(Rotary_EncoderToRS_Ratio);
+                    //Gear reduction driving over driven (e.g. driven is the bigger gear)
+                    return m_props->get_bool(Name.c_str(), m_props->get_bool(CommonName.c_str(), false));
+                }
                 virtual double Drive_GetDistancePerPulse(size_t wheelSection) const
                 {
                     return GetDistancePerPulse(wheelSection,false);
@@ -238,8 +238,14 @@ private:
                 //m_turningEncoder->SetDistancePerPulse(2 * wpi::math::pi / kEncoderResolution);
                 #pragma endregion
 
+                //Grab our distance per pulse
                 m_driveEncoder->SetDistancePerPulse(m_Converter.Drive_GetDistancePerPulse(m_ThisSectionIndex));
                 m_turningEncoder->SetDistancePerPulse(m_Converter.Swivel_GetDistancePerPulse(m_ThisSectionIndex));
+                //Grab if we need to reverse direction (broken up to step through code)
+                bool IsReversed=m_Converter.GetIsReversed(m_ThisSectionIndex,false);
+                m_driveEncoder->SetReverseDirection(IsReversed);
+                IsReversed=m_Converter.GetIsReversed(m_ThisSectionIndex,true);
+                m_turningEncoder->SetReverseDirection(IsReversed);
 
                 //Only instantiate if we are in a simulation
                 if (RobotBase::IsSimulation())
