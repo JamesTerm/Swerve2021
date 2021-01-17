@@ -748,6 +748,8 @@ public:
 		//This customizes the controller, add your own controller
 		//especially if your axis assignments need to change
 		//Test_Controls(eKeyboard);
+		//use field centric drive here
+		//assets.put_bool(csz_Drive_UseFieldCentric, true);
 	}
 };
 

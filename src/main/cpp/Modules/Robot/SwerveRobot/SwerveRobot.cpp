@@ -576,6 +576,10 @@ public:
 	{
 		m_MotionControl2D.SetLinearVelocity_local(forward, right);
 	}
+	void SetLinearVelocity_global(double north, double east)
+	{
+		m_MotionControl2D.SetLinearVelocity_global(north, east);
+	}
 	void SetAngularVelocity(double clockwise)
 	{
 		m_MotionControl2D.SetAngularVelocity(clockwise);
@@ -683,6 +687,10 @@ void SwerveRobot::Shutdown()
 void SwerveRobot::SetLinearVelocity_local(double forward, double right)
 {
 	m_SwerveRobot->SetLinearVelocity_local(forward, right);
+}
+void SwerveRobot::SetLinearVelocity_global(double north, double east)
+{
+	m_SwerveRobot->SetLinearVelocity_global(north, east);
 }
 void SwerveRobot::SetAngularVelocity(double clockwise)
 {
