@@ -9,7 +9,7 @@ namespace Module
 	namespace Output
 	{
 
-//TODO convert ControllerVoltageManager to hpp for TalonSPX, if we need to use it
+//TODO Move this to WPI_Output.cpp, unless there is a reason to discern motor controllers of the same group
 class ControllerVoltageManager //: public OutputComponent
 {
     //Formally known as Motor, changed name to better describe its purpose
@@ -139,6 +139,10 @@ public:
         //reserved... if the methods from CVM are needed
         //val = m_CVM.CalculateVal(val);
         // Log::General(Name+" : "  + to_string(val));
+        //Note: The InUse() has been stripped out, because there should never be any reason to run this code
+        //in a multi-threaded environment, for a single threaded environment there should never be a reason to have another
+        //caller need this class, this design has autonomous and teleop to use the same code path, which makes it possible
+        //for hybrid teleop, which is ideal for faster cycles.
         if (val < 0 || val>0)
         {
             if (m_reversed) m_Max->Set(-val);

@@ -31,13 +31,17 @@ private:
             eRearRight
         };
         //we'll keep the same coding conventions as the example
-        struct WheelModule
+        class WheelModule
         {
-            //keep as pointers to assign during init
-            std::shared_ptr<frc::PWMVictorSPX> m_drive_motor;
-            std::shared_ptr<frc::PWMVictorSPX> m_swivel_motor;
-            std::shared_ptr<frc::Encoder> m_driveEncoder;  //Note... need two channels per encoder
-            std::shared_ptr<frc::Encoder> m_turningEncoder;
+        private:
+            //keep as pointers to assign during init, because of this we can have both simulation and actual controllers
+            //same for encoders, this way we can somewhat test the actual controllers in simulation, and for the actual
+            //robot they just remain as null pointers that are never used.
+            std::shared_ptr<frc::PWMVictorSPX> m_sim_drive_motor=nullptr;
+            std::shared_ptr<SparkMaxController> m_drive_motor=nullptr;            
+            std::shared_ptr<frc::PWMVictorSPX> m_swivel_motor=nullptr;
+            std::shared_ptr<frc::Encoder> m_driveEncoder=nullptr;  //Note... need two channels per encoder
+            std::shared_ptr<frc::Encoder> m_turningEncoder=nullptr;
             //These are not instantiated in the real robot
             std::shared_ptr<frc::sim::EncoderSim> m_driveEncoder_sim=nullptr;
             std::shared_ptr<frc::sim::EncoderSim> m_turningEncoder_sim=nullptr;
@@ -205,6 +209,18 @@ private:
             };
 
             EncoderTranslation m_Converter;
+
+            bool test_IsSimulation() const
+            {
+                //override to test actual controllers in the simulation (will need to be open loop, unless we can get vendors to work properly)
+                //ultimately, the vendors code should simulate properly, I will keep checking for updates.
+                #if 1
+                    return frc::RobotBase::IsSimulation();
+                #else
+                    return false;
+                #endif
+            }
+        public:
             void Init(size_t index,const Framework::Base::asset_manager *props=nullptr)
             {
                 m_ThisSectionIndex=index;
@@ -213,7 +229,11 @@ private:
                 //Note here we can use the asset manager to switch motor assignments
                 //the index is always the section order, but the motor to use can
                 //be the property that section order represents
-                m_drive_motor=std::make_shared<PWMVictorSPX>(index);
+                if (test_IsSimulation())
+                    m_sim_drive_motor=std::make_shared<PWMVictorSPX>(index);
+                else
+                    m_drive_motor=std::make_shared<SparkMaxController>(index);
+
                 m_swivel_motor=std::make_shared<PWMVictorSPX>(index+4);
                 m_driveEncoder=std::make_shared<Encoder>(index*2,index*2+1);
                 m_turningEncoder=std::make_shared<Encoder>((index+4)*2,(index+4)*2+1);
@@ -257,7 +277,10 @@ private:
             }
             void TimeSlice(double dTime_s, double drive_voltage, double swivel_voltage, Robot::SwerveVelocities &physicalOdometry)
             {
-                m_drive_motor->Set(drive_voltage);
+                if (test_IsSimulation())
+                    m_sim_drive_motor->Set(drive_voltage);
+                else
+                    m_drive_motor->Set(drive_voltage);
                 m_swivel_motor->Set(swivel_voltage);
                 //now to update our odometry
                 //for now this is an exact read, but will need to be translated from a real encoder
