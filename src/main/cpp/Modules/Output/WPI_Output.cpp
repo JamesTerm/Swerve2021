@@ -5,6 +5,7 @@
 #include <frc/simulation/EncoderSim.h>
 #include <wpi/math>
 #include "WPI_Output.h"
+#include "VendorSpeedControllers.h"
 //use properties for encoder reading conversions
 #include "../../Properties/RegistryV1.h"
 
