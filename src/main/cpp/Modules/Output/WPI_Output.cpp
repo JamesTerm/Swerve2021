@@ -41,7 +41,7 @@ private:
         {
         private:
             std::shared_ptr<SparkMaxController> m_drive_motor=nullptr;            
-            std::shared_ptr<frc::PWMVictorSPX> m_swivel_motor=nullptr;
+            std::shared_ptr<TalonSRX_Controller> m_swivel_motor=nullptr;
             std::shared_ptr<frc::Encoder> m_driveEncoder=nullptr;  //Note... need two channels per encoder
             std::shared_ptr<frc::Encoder> m_turningEncoder=nullptr;
             //These are not instantiated in the real robot
@@ -220,6 +220,7 @@ private:
 
             //This is a fall back as I'll try to use SparkMax in simulation
             std::shared_ptr<frc::PWMVictorSPX> m_sim_drive_motor=nullptr;
+            std::shared_ptr<frc::PWMVictorSPX> m_sim_swivel_motor=nullptr;
             std::shared_ptr<frc::sim::SimDeviceSim> m_SparkMaxSimDevice;
             #pragma endregion
 
@@ -243,11 +244,16 @@ private:
                 //the index is always the section order, but the motor to use can
                 //be the property that section order represents
                 if (UseFallbackSim())
+                {
                     m_sim_drive_motor=std::make_shared<PWMVictorSPX>(index);
+                    m_sim_swivel_motor=std::make_shared<PWMVictorSPX>(index+4);
+                }
                 else
+                {
                     m_drive_motor=std::make_shared<SparkMaxController>(index);
+                    m_swivel_motor=std::make_shared<TalonSRX_Controller>(index+4);
+                }
 
-                m_swivel_motor=std::make_shared<PWMVictorSPX>(index+4);
                 if (UseFallbackSim())
                     m_driveEncoder=std::make_shared<Encoder>(index*2,index*2+1);
                 m_turningEncoder=std::make_shared<Encoder>((index+4)*2,(index+4)*2+1);
@@ -284,7 +290,10 @@ private:
             void TimeSlice(double dTime_s, double drive_voltage, double swivel_voltage, Robot::SwerveVelocities &physicalOdometry)
             {
                 if (UseFallbackSim())
+                {
                     m_sim_drive_motor->Set(drive_voltage);
+                    m_sim_swivel_motor->Set(swivel_voltage);
+                }
                 else
                 {
                     m_drive_motor->Set(drive_voltage);
@@ -293,8 +302,9 @@ private:
                         hal::SimDouble outputProp = m_SparkMaxSimDevice->GetDouble("Applied Output");
                         outputProp.Set(drive_voltage);
                     }
+                    m_swivel_motor->Set(swivel_voltage);
                 }
-                m_swivel_motor->Set(swivel_voltage);
+                
                 //now to update our odometry
                 if (UseFallbackSim())
                 {

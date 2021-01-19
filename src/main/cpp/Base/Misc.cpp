@@ -90,7 +90,7 @@ void StripCommentsAndTrailingWhiteSpace(char* line)
 }
 
 
-#ifndef _Win32
+#ifdef __GNUC__
 //from http://www.koders.com/c/fid5F9B1CF12E947E5030A132D309A367C5CCB671CE.aspx
 char *itoa (int value, char *string, int radix)
 {
