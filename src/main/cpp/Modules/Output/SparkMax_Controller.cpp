@@ -95,32 +95,58 @@ public:
     }
 };
 
+//Until I can figure out how to fix this, we exit with a memory leak :(
+#define __DestructorFixHack__
+
 class SparkMaxItem
 {
 private:
+    #ifndef __DestructorFixHack__
 	std::shared_ptr<CANSparkMax> m_Max;
+    #else
+    CANSparkMax *m_Max;
+    #endif
+
 	int m_channel;
 	bool m_reversed;
 	std::string m_Name;
 	double m_Offset;
+    double m_DPP=24;
     ControllerVoltageManager m_CVM;  //Avoid inhertance if at all possible!
 public:
 	SparkMaxItem(int _channel, std::string _name, bool _reversed)
     {
         m_channel = _channel;
         m_reversed = _reversed;
+        #ifndef __DestructorFixHack__
         m_Max = std::make_shared<CANSparkMax>(m_channel, rev::CANSparkMax::MotorType::kBrushless);
+        #else
+        m_Max = new CANSparkMax(m_channel, rev::CANSparkMax::MotorType::kBrushless);
+        #endif
+
         m_Max->SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
         m_Name = _name;
         m_Offset = 0;
     }
+
+    #ifndef __DestructorFixHack__
     ~SparkMaxItem()
     {
         m_Max.reset();
     }
-	double GetEncoderValue() const
+    #endif
+
+	double GetEncoderPosition() const
     {
-        return m_Max->GetEncoder(rev::CANEncoder::EncoderType::kHallSensor, 24).GetPosition() - m_Offset;
+        return m_Max->GetEncoder(rev::CANEncoder::EncoderType::kHallSensor, m_DPP).GetPosition() - m_Offset;
+    }
+   	double GetEncoderVelocity() const
+    {
+        return m_Max->GetEncoder(rev::CANEncoder::EncoderType::kHallSensor, m_DPP).GetVelocity();
+    }
+    void SetDistancePerPulse(double distancePerPulse)
+    {
+        m_DPP=distancePerPulse;
     }
 	virtual double Get() const
     {
@@ -132,7 +158,7 @@ public:
     }
 	void Reset() 
     {
-        m_Offset = m_Max->GetEncoder(rev::CANEncoder::EncoderType::kHallSensor, 24).GetPosition();
+        m_Offset = m_Max->GetEncoder(rev::CANEncoder::EncoderType::kHallSensor, m_DPP).GetPosition();
     }
 	virtual void Set(double val) 
     {
@@ -167,7 +193,7 @@ public:
     // }
     void ResetEncoderValue() 
     {
-        m_Max->GetEncoder(rev::CANEncoder::EncoderType::kHallSensor, 24).SetPosition(0);
+        m_Max->GetEncoder(rev::CANEncoder::EncoderType::kHallSensor, m_DPP).SetPosition(0);
     }
 };
 
@@ -183,10 +209,19 @@ SparkMaxController::SparkMaxController(int _channel)
     _name += _channel;
     m_controller = std::make_shared<SparkMaxItem>(_channel, _name, false);
 }
-double SparkMaxController::GetEncoderValue() const
+void SparkMaxController::SetDistancePerPulse(double distancePerPulse)
 {
-    return m_controller->GetEncoderValue();
+    m_controller->SetDistancePerPulse(distancePerPulse);
 }
+double SparkMaxController::GetEncoderPosition() const
+{
+    return m_controller->GetEncoderPosition();
+}
+double SparkMaxController::GetEncoderVelocity() const
+{
+    return m_controller->GetEncoderVelocity();
+}
+
 double SparkMaxController::Get() const
 {
     return m_controller->Get();

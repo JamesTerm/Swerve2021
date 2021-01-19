@@ -15,7 +15,10 @@ class SparkMaxController
 public:
 	SparkMaxController(int _channel, std::string _name, bool _reversed);
 	SparkMaxController(int _channel);
-	double GetEncoderValue() const;
+
+	void SetDistancePerPulse(double distancePerPulse);
+	double GetEncoderPosition() const;
+	double GetEncoderVelocity() const;
     
 	double Get() const;
 	int GetPolarity() const;
