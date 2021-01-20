@@ -231,7 +231,7 @@ private:
             {
                 //override to test actual controllers in the simulation (will need to be open loop, unless we can get vendors to work properly)
                 //ultimately, the vendors code should simulate properly, I will keep checking for updates.
-                #if 1
+                #if 0
                     return frc::RobotBase::IsSimulation();
                 #else
                     return false;
@@ -334,8 +334,7 @@ private:
                     physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
                         m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
                     #else
-                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
-                        m_Converter.Swivel_ReadEncoderToPosition(m_TestSwivelPos,m_ThisSectionIndex);
+                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=m_TestSwivelPos;
                     #endif
                 }
             }
@@ -353,7 +352,7 @@ private:
                 {
                     m_SparkMaxSimDevice->GetDouble("Velocity").Set(driveRate);
                     m_swivel_motor->sim_SetQuadratureRawPosition(swivelPos);
-                    m_TestSwivelPos=NormalizeRotation2(swivel_distance);
+                    m_TestSwivelPos=swivel_distance;
                    //frc::SmartDashboard::PutNumber("Test",m_drive_motor->GetEncoderVelocity());
                     #if 0
                     if (m_ThisSectionIndex==0)
