@@ -35,8 +35,13 @@ public:
     }
 	double GetQuadraturePosition()
 	{
+        //TODO until I test on a real motor I will leave the method as it was
         //Since talon doesn't have DPP methods, we manage it at this level
        	return m_encoderEnabled ? ((double)m_talon->GetSensorCollection().GetQuadraturePosition())*m_DPP : -1.0;
+        //From https://www.chiefdelphi.com/t/ctre-encoder-cant-zero-reset-encoder-values/162269/8
+        //found that in simulation this works more reliable than GetQuadraturePosition() in that it updates more frequently
+        //This may be true for real robot too, unless the issue is the talon's ability to get updates from simulation
+        //return   m_talon->GetSelectedSensorPosition()*m_DPP;
 	}
 	void SetQuadraturePosition(int val)
 	{

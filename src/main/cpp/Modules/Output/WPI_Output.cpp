@@ -110,7 +110,7 @@ private:
                     //Both encoder reading and position are in radians, position is normalized from -pi to pi
                     //it can work within reason from -2pi to 2pi, but should not exceed this
                     //encoder reading has no normalization, but shouldn't be to far off, it starts with zero and can be subjected to
-                    //multiple turns in any direction, typically this shouldn't be more than 5 turns so a while loop on the normalizaion
+                    //multiple turns in any direction, typically this shouldn't be more than 5 turns so a while loop on the normalization
                     //is fine but to be safe I'd set a limit and trigger a drive disable if it is exceeded, if this fails driving on
                     //a faulty turned wheel can damage robot, so this would be the correct course of action.
                     //The encoder's radians can have the gear reduction in it, but it may be easier to keep like the example, so that 
@@ -330,12 +330,24 @@ private:
                 {
                     physicalOdometry.Velocity.AsArray[m_ThisSectionIndex]=
                         m_Converter.Drive_ReadEncoderToLinearVelocity(m_drive_motor->GetEncoderVelocity(),m_ThisSectionIndex);
-                    #if 0
-                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
-                        m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
-                    #else
-                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=m_TestSwivelPos;
-                    #endif
+
+                    // if (m_ThisSectionIndex==0)
+                    // {
+                    //     const double encoderPos_raw=m_swivel_motor->GetEncoderPosition();
+                    //     const double encoderPos=m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
+                    //     int x=9;
+                    //     printf("-r-%.2f--",encoderPos_raw);
+                    // }
+                    //TODO There is a serious update issue with Talon's method to get position, so far it is not yet known if this is a simulation
+                    //update problem or a real motor update problem, for now we'll use a fall-back bypass, but I'll need to know if the actual motor
+                    //can update at least every 10ms.  If not then I'll need to consider averaging either the position or rotary's encoder velocity
+                    if (frc::RobotBase::IsReal())
+                    {
+                        physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
+                            m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
+                    }
+                    else
+                        physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=m_TestSwivelPos;
                 }
             }
             void SimulatorTimeSlice(double dTime_s, double drive_velocity, double swivel_distance) 
@@ -357,6 +369,7 @@ private:
                     #if 0
                     if (m_ThisSectionIndex==0)
                     {
+                        printf("-s-%.2f--",swivelPos);
                         frc::SmartDashboard::PutNumber("Test",
                         m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex));
                         frc::SmartDashboard::PutNumber("Test2",swivel_distance);

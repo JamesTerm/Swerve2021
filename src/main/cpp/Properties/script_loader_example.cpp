@@ -476,7 +476,7 @@ private:
 
 		struct swivel_common
 		{
-			bool is_closed = 0;
+			bool is_closed = 1;
 			bool show_pid_dump = false;
 			//ds_display_row = -1;
 			const bool use_pid_up_only = true;
