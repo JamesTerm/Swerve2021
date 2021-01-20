@@ -41,6 +41,9 @@ public:
 	void SetDistancePerPulse(double distancePerPulse);
 	double GetEncoderPosition() const;
 	double GetEncoderVelocity() const;
+	//for simulation
+	void sim_SetQuadratureRawPosition(double new_pos);   //in native units
+    void sim_SetQuadratureVelocity(double newRate_s); //in seconds
 	//motor methods
 	double Get() const;
 	void Set(double val);

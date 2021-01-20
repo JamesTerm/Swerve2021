@@ -17,7 +17,7 @@ private:
 	int m_channel;
 	bool m_reversed;
 	bool m_encoderEnabled;
-
+    double m_DPP=1.0;
 public:
 	TalonSRXItem(int _channel, std::string _name, bool _reversed, bool enableEncoder)
 	{
@@ -29,14 +29,30 @@ public:
 	if(enableEncoder)
 		m_talon->ConfigSelectedFeedbackSensor(FeedbackDevice::QuadEncoder, 0, 0);
 	}
-	int GetQuadraturePosition()
+    void SetDistancePerPulse(double distancePerPulse)
+    {
+        m_DPP=distancePerPulse;
+    }
+	double GetQuadraturePosition()
 	{
-        	return m_encoderEnabled ? m_talon->GetSensorCollection().GetQuadraturePosition() : -1;
+        //Since talon doesn't have DPP methods, we manage it at this level
+       	return m_encoderEnabled ? ((double)m_talon->GetSensorCollection().GetQuadraturePosition())*m_DPP : -1.0;
 	}
 	void SetQuadraturePosition(int val)
 	{
         m_talon->GetSensorCollection().SetQuadraturePosition(val, 0);
 	}
+   	void sim_SetQuadratureRawPosition(double new_pos)
+    {
+        //we factor our own inverse DPP
+        m_talon->GetSimCollection().SetQuadratureRawPosition((int)(new_pos*(1.0/m_DPP)));    
+    }
+    void sim_SetQuadratureVelocity(double newRate_s)
+    {
+        //in native units per 100ms
+        m_talon->GetSimCollection().SetQuadratureVelocity((int)(newRate_s*10.0));
+    }
+
 	double Get() const
 	{
         if (m_reversed)
@@ -76,7 +92,7 @@ TalonSRX_Controller::TalonSRX_Controller(int _channel, bool enableEncoder)
 
 void TalonSRX_Controller::SetDistancePerPulse(double distancePerPulse)
 {
-
+    m_controller->SetDistancePerPulse(distancePerPulse);
 }
 double TalonSRX_Controller::GetEncoderPosition() const
 {
@@ -85,6 +101,14 @@ double TalonSRX_Controller::GetEncoderPosition() const
 double TalonSRX_Controller::GetEncoderVelocity() const
 {
     return 0.0;  //TODO
+}
+void TalonSRX_Controller::sim_SetQuadratureRawPosition(double new_pos)
+{
+    m_controller->sim_SetQuadratureRawPosition(new_pos);
+}
+void TalonSRX_Controller::sim_SetQuadratureVelocity(double newRate_s)
+{
+    m_controller->sim_SetQuadratureVelocity(newRate_s);
 }
 
 double TalonSRX_Controller::Get() const

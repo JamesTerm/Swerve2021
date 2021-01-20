@@ -19,6 +19,19 @@ namespace Module
 	namespace Output
 	{
 
+inline double NormalizeRotation2(double Rotation)
+{
+    //we should really push a SmartDashboard check-box to disable drive
+    assert(fabs(Rotation) < Pi2 * 20); //should be less than 20 turns!  If it's greater something is terribly wrong!
+    //const double Pi2 = M_PI * 2.0;
+    //Normalize the rotation
+    while (Rotation > M_PI)
+        Rotation -= Pi2;
+    while (Rotation < -M_PI)
+        Rotation += Pi2;
+    return Rotation;
+}
+
 //The implementation here is direct and works with the simulation
 class WheelModule_Interface
 {
@@ -187,18 +200,6 @@ private:
                     //division of zero
                     return linearVelocity * (1.0/GetGearReduction(wheelSection, false)) * (1.0/GetWheelRadius());
                 }
-                inline double NormalizeRotation2(double Rotation) const
-                {
-                    //we should really push a SmartDashboard check-box to disable drive
-                    assert(fabs(Rotation) < Pi2 * 20); //should be less than 20 turns!  If it's greater something is terribly wrong!
-                    //const double Pi2 = M_PI * 2.0;
-                    //Normalize the rotation
-                    while (Rotation > M_PI)
-                        Rotation -= Pi2;
-                    while (Rotation < -M_PI)
-                        Rotation += Pi2;
-                    return Rotation;
-                }
                 virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection) const
                 {
                     //Factor in the gear reduction and normalize, for now I'll just assert() the limit
@@ -222,13 +223,15 @@ private:
             std::shared_ptr<frc::PWMVictorSPX> m_sim_drive_motor=nullptr;
             std::shared_ptr<frc::PWMVictorSPX> m_sim_swivel_motor=nullptr;
             std::shared_ptr<frc::sim::SimDeviceSim> m_SparkMaxSimDevice;
+            //Testing, for simulation this can bypass the swivel encoders
+            double m_TestSwivelPos=0.0;
             #pragma endregion
 
             bool UseFallbackSim() const
             {
                 //override to test actual controllers in the simulation (will need to be open loop, unless we can get vendors to work properly)
                 //ultimately, the vendors code should simulate properly, I will keep checking for updates.
-                #if 0
+                #if 1
                     return frc::RobotBase::IsSimulation();
                 #else
                     return false;
@@ -251,34 +254,44 @@ private:
                 else
                 {
                     m_drive_motor=std::make_shared<SparkMaxController>(index);
-                    m_swivel_motor=std::make_shared<TalonSRX_Controller>(index+4);
+                    m_swivel_motor=std::make_shared<TalonSRX_Controller>(index+4,true);
                 }
 
                 if (UseFallbackSim())
+                {
                     m_driveEncoder=std::make_shared<Encoder>(index*2,index*2+1);
-                m_turningEncoder=std::make_shared<Encoder>((index+4)*2,(index+4)*2+1);
+                    m_turningEncoder=std::make_shared<Encoder>((index+4)*2,(index+4)*2+1);
+                }
 
                 //Grab our distance per pulse
                 if (UseFallbackSim())
+                {
                     m_driveEncoder->SetDistancePerPulse(m_Converter.Drive_GetDistancePerPulse(m_ThisSectionIndex));
+                    m_turningEncoder->SetDistancePerPulse(m_Converter.Swivel_GetDistancePerPulse(m_ThisSectionIndex));
+                }
                 else
+                {
                     m_drive_motor->SetDistancePerPulse(m_Converter.Drive_GetDistancePerPulse(m_ThisSectionIndex));
-
-                m_turningEncoder->SetDistancePerPulse(m_Converter.Swivel_GetDistancePerPulse(m_ThisSectionIndex));
+                    m_swivel_motor->SetDistancePerPulse(m_Converter.Swivel_GetDistancePerPulse(m_ThisSectionIndex));
+                }
                 //Grab if we need to reverse direction (broken up to step through code)
-                bool IsReversed=m_Converter.GetIsReversed(m_ThisSectionIndex,false);
-                //TODO provide reverse direction for SparkMax
+                //TODO provide reverse direction for SparkMax and TalonSRX
                 if (UseFallbackSim())
+                {
+                    bool IsReversed=m_Converter.GetIsReversed(m_ThisSectionIndex,false);
                     m_driveEncoder->SetReverseDirection(IsReversed);
-                IsReversed=m_Converter.GetIsReversed(m_ThisSectionIndex,true);
-                m_turningEncoder->SetReverseDirection(IsReversed);
+                    IsReversed=m_Converter.GetIsReversed(m_ThisSectionIndex,true);
+                    m_turningEncoder->SetReverseDirection(IsReversed);
+                }
 
                 //Only instantiate if we are in a simulation
                 if (RobotBase::IsSimulation())
                 {
                     if (UseFallbackSim())
+                    {
                         m_driveEncoder_sim=std::make_shared<sim::EncoderSim>(*m_driveEncoder);
-                    m_turningEncoder_sim=std::make_shared<sim::EncoderSim>(*m_turningEncoder);
+                        m_turningEncoder_sim=std::make_shared<sim::EncoderSim>(*m_turningEncoder);
+                    }
                     std::string deviceKey = "SPARK MAX [" ;
                     char buffer[4];
                     itoa(m_ThisSectionIndex,buffer,10);
@@ -310,27 +323,47 @@ private:
                 {
                     physicalOdometry.Velocity.AsArray[m_ThisSectionIndex]=
                         m_Converter.Drive_ReadEncoderToLinearVelocity(m_driveEncoder->GetRate(),m_ThisSectionIndex);
+                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
+                        m_Converter.Swivel_ReadEncoderToPosition(m_turningEncoder->GetDistance(),m_ThisSectionIndex);
                 }
                 else
                 {
                     physicalOdometry.Velocity.AsArray[m_ThisSectionIndex]=
                         m_Converter.Drive_ReadEncoderToLinearVelocity(m_drive_motor->GetEncoderVelocity(),m_ThisSectionIndex);
+                    #if 0
+                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
+                        m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
+                    #else
+                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
+                        m_Converter.Swivel_ReadEncoderToPosition(m_TestSwivelPos,m_ThisSectionIndex);
+                    #endif
                 }
-                
-                physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
-                    m_Converter.Swivel_ReadEncoderToPosition(m_turningEncoder->GetDistance(),m_ThisSectionIndex);
             }
             void SimulatorTimeSlice(double dTime_s, double drive_velocity, double swivel_distance) 
             {
                 //Note:  this slice does not start until init is complete (solved higher level)
                 double driveRate = m_Converter.Drive_SimLinearVelocityToEncoderWrite(drive_velocity, m_ThisSectionIndex);
+                double swivelPos=m_Converter.Swivel_SimPositionToEncoderWrite(swivel_distance, m_ThisSectionIndex);
                 if (UseFallbackSim())
+                {
                     m_driveEncoder_sim->SetRate(driveRate);
+                    m_turningEncoder_sim->SetDistance(swivelPos);
+                }
                 else
+                {
                     m_SparkMaxSimDevice->GetDouble("Velocity").Set(driveRate);
-                //frc::SmartDashboard::PutNumber("Test",m_drive_motor->GetEncoderVelocity());
-                //assert turning sim is set
-                m_turningEncoder_sim->SetDistance(m_Converter.Swivel_SimPositionToEncoderWrite(swivel_distance, m_ThisSectionIndex));
+                    m_swivel_motor->sim_SetQuadratureRawPosition(swivelPos);
+                    m_TestSwivelPos=NormalizeRotation2(swivel_distance);
+                   //frc::SmartDashboard::PutNumber("Test",m_drive_motor->GetEncoderVelocity());
+                    #if 0
+                    if (m_ThisSectionIndex==0)
+                    {
+                        frc::SmartDashboard::PutNumber("Test",
+                        m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex));
+                        frc::SmartDashboard::PutNumber("Test2",swivel_distance);
+                    }
+                    #endif
+                }
             }
         };
 
