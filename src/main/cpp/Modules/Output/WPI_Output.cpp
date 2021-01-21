@@ -331,16 +331,16 @@ private:
                     physicalOdometry.Velocity.AsArray[m_ThisSectionIndex]=
                         m_Converter.Drive_ReadEncoderToLinearVelocity(m_drive_motor->GetEncoderVelocity(),m_ThisSectionIndex);
 
-                    // if (m_ThisSectionIndex==0)
-                    // {
-                    //     const double encoderPos_raw=m_swivel_motor->GetEncoderPosition();
-                    //     const double encoderPos=m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
-                    //     int x=9;
-                    //     printf("-r-%.2f--",encoderPos_raw);
-                    // }
-                    //TODO There is a serious update issue with Talon's method to get position, so far it is not yet known if this is a simulation
-                    //update problem or a real motor update problem, for now we'll use a fall-back bypass, but I'll need to know if the actual motor
-                    //can update at least every 10ms.  If not then I'll need to consider averaging either the position or rotary's encoder velocity
+                    #if 0
+                    if (m_ThisSectionIndex==0)
+                    {
+                        const double encoderPos_raw=m_swivel_motor->GetEncoderPosition();
+                        const double encoderPos=m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
+                        printf("-r-%.2f--\n",encoderPos_raw);
+                    }
+                    #endif
+                    //TODO:  The config needs to handle 20ms stresses if we must use talon to transmit encoder readings 
+                    #if 1
                     if (frc::RobotBase::IsReal())
                     {
                         physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
@@ -348,6 +348,10 @@ private:
                     }
                     else
                         physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=m_TestSwivelPos;
+                    #else
+                    physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
+                        m_Converter.Swivel_ReadEncoderToPosition(m_swivel_motor->GetEncoderPosition(),m_ThisSectionIndex);
+                    #endif
                 }
             }
             void SimulatorTimeSlice(double dTime_s, double drive_velocity, double swivel_distance) 
