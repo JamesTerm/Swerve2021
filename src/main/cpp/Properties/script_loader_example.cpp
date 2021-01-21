@@ -493,6 +493,7 @@ private:
 			const double accel = 10.0;						//We may indeed have a two button solution(match with max accel)
 			const double brake = 10.0;
 			const bool using_range = 0;	//Warning Only use range if we have a potentiometer!
+			const double inv_max_accel = 0.0;  //solved empirically
 			const bool use_aggressive_stop = true;
 		};
 		#pragma endregion
@@ -654,7 +655,7 @@ private:
 			PUT_NUMBER(Rotary_Arm_GainAssist_ToleranceConsecutiveCount, val.tolerance_count);
 			//Use _c, _t1, _t2, _t3, _t4 for array 0..5 respectively
 			//PUT_NUMBER(Rotary_Voltage_Terms) //PolynomialEquation_forth_Props 
-			//PUT_NUMBER(Rotary_InverseMaxAccel, val.inv_max_accel);
+			PUT_NUMBER(Rotary_InverseMaxAccel, val.inv_max_accel);
 			//PUT_NUMBER(Rotary_InverseMaxDecel, val.InverseMaxDecel);
 			//PUT_NUMBER(Rotary_Positive_DeadZone, val.Positive_DeadZone);
 			//PUT_NUMBER(Rotary_Negative_DeadZone, val.Negative_DeadZone);

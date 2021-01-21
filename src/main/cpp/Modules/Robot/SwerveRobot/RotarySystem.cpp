@@ -526,7 +526,7 @@ public:
 				SetRequestedVelocity(0.0);  //ensure the requested velocity is zero once it gets locked to ship position
 				SetCurrentLinearAcceleration(0.0);  //lock ship to position
 				m_ErrorOffset = 0.0;  //no error correction to factor in (avoids noisy resting point)
-				m_ToleranceCounter=0.0;
+				m_ToleranceCounter=0;
 			}
 		}
 
