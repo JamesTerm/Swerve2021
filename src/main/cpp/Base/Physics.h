@@ -381,7 +381,7 @@ public:
 	}
 	double GetFrictionalForce(double DeltaTime_s, double Ground = 0.0, double gravity = 9.80665, double BrakeResistence = 0.0) const
 	{
-		/// \param Brake is a brake coast parameter where if gravity pulls it down it can apply a scalar to slow down the reversed rate
+		/// \param Brake is a brake coast parameter where if gravity pulls it down it can apply a scaler to slow down the reversed rate
 		/// where 0 is full stop and 1 is full coast (range is 0 - 1)
 
 		if (!DeltaTime_s) return 0.0;  //since we divide by time avoid division by zero
