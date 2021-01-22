@@ -654,9 +654,11 @@ private:
 			PUT_NUMBER(Rotary_PrecisionTolerance, val.tolerance);
 			PUT_NUMBER(Rotary_Arm_GainAssist_ToleranceConsecutiveCount, val.tolerance_count);
 			//Use _c, _t1, _t2, _t3, _t4 for array 0..5 respectively
-			//PUT_NUMBER(Rotary_Voltage_Terms) //PolynomialEquation_forth_Props 
-			PUT_NUMBER(Rotary_InverseMaxAccel, val.inv_max_accel);
-			//PUT_NUMBER(Rotary_InverseMaxDecel, val.InverseMaxDecel);
+			//PUT_NUMBER(Rotary_Voltage_Terms) //PolynomialEquation_forth_Props
+			//TODO This is from default, but should determine maximum torque capability
+			PUT_NUMBER(Ship_1D_MaxAccelForward, 38.0);
+			//PUT_NUMBER(Rotary_InverseMaxAccel, val.inv_max_accel);
+			PUT_NUMBER(Rotary_InverseMaxDecel, 1.0/20.0);
 			//PUT_NUMBER(Rotary_Positive_DeadZone, val.Positive_DeadZone);
 			//PUT_NUMBER(Rotary_Negative_DeadZone, val.Negative_DeadZone);
 			//PUT_NUMBER(Rotary_MinLimitRange, val.MinLimitRange);
@@ -677,8 +679,8 @@ private:
 		//Test PID
 		if (false)
 		{
-			prefix = csz_sFL_; //pick the encoder of the left front wheel
-			//prefix = csz_aFL_; //pick the potentiometer of the left front wheel
+			//prefix = csz_sFL_; //pick the encoder of the left front wheel
+			prefix = csz_aFL_; //pick the potentiometer of the left front wheel
 			PUT_BOOL(Rotary_PID_Console_Dump, true); //bool
 		}
 

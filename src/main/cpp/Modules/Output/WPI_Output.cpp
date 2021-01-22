@@ -339,8 +339,10 @@ private:
                         printf("-r-%.2f--\n",encoderPos_raw);
                     }
                     #endif
-                    //TODO:  The config needs to handle 20ms stresses if we must use talon to transmit encoder readings 
-                    #if 1
+                    //Note:  The config is setup to handle 20ms stresses if we must use talon to transmit encoder readings 
+                    //We set the prediction to 20, and add some feed for deceleration on the simulation, may be different for
+                    //actual motor.
+                    #if 0
                     if (frc::RobotBase::IsReal())
                     {
                         physicalOdometry.Velocity.AsArray[m_ThisSectionIndex+4]=
