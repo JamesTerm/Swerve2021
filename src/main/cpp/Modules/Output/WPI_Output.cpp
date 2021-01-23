@@ -19,10 +19,10 @@ namespace Module
 	namespace Output
 	{
 
-inline double NormalizeRotation2(double Rotation)
+inline double NormalizeRotation3(double Rotation)
 {
     //we should really push a SmartDashboard check-box to disable drive
-    assert(fabs(Rotation) < Pi2 * 20); //should be less than 20 turns!  If it's greater something is terribly wrong!
+    assert(fabs(Rotation) < Pi2 * 60); //should be less than 60 turns!  If it's greater something is terribly wrong!
     //const double Pi2 = M_PI * 2.0;
     //Normalize the rotation
     while (Rotation > M_PI)
@@ -203,7 +203,7 @@ private:
                 virtual double Swivel_ReadEncoderToPosition(double encoderReading,size_t wheelSection) const
                 {
                     //Factor in the gear reduction and normalize, for now I'll just assert() the limit
-                    return  NormalizeRotation2(encoderReading * GetGearReduction(wheelSection,true));
+                    return  NormalizeRotation3(encoderReading * GetGearReduction(wheelSection,true));
                 }
                 virtual double Swivel_SimPositionToEncoderWrite(double position,size_t wheelSection) const
                 {

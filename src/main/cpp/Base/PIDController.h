@@ -218,7 +218,8 @@ public:
 		if (m_enabled)
 		{
 			//While it is true it forces client to use large values it is consistent and will yield much better results
-			m_error = (setpoint - input) * dTime_s;  //Using dTime_s will keep the errors consistent if time is erratic
+			m_error = setpoint - input;
+			//Note: for continuous test difference before applying the time scaler
 			if (m_continuous)
 			{
 				if (fabs(m_error) >
@@ -231,8 +232,8 @@ public:
 						m_maximumInput - m_minimumInput;
 				}
 			}
-
-
+			//Using dTime_s will keep the errors consistent if time is erratic
+			m_error *= dTime_s;
 			//If both the setpoint and input are zero then there should be no total error
 			if (m_AutoResetI && IsZero(setpoint + input))
 				m_totalError = 0.0;
