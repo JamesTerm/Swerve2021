@@ -686,8 +686,8 @@ private:
 			//PUT_NUMBER(Rotary_InverseMaxAccel, 0.0);
 			PUT_NUMBER(Rotary_InverseMaxDecel, 1.0/600.0);
 			//PUT_NUMBER(Rotary_InverseMaxDecel, val.InverseMaxDecel);
-			//PUT_NUMBER(Rotary_Positive_DeadZone, val.Positive_DeadZone);
-			//PUT_NUMBER(Rotary_Negative_DeadZone, val.Negative_DeadZone);
+			PUT_NUMBER(Rotary_Positive_DeadZone, 0.11);
+			PUT_NUMBER(Rotary_Negative_DeadZone, 0.11);
 			//PUT_NUMBER(Rotary_MinLimitRange, val.MinLimitRange);
 			//PUT_NUMBER(Rotary_MaxLimitRange, val.MaxLimitRange);
 			//PUT_NUMBER(Rotary_Feedback_DiplayRow, Rotary_.Feedback_DiplayRow);
@@ -700,6 +700,7 @@ private:
 			//PUT_BOOL(Rotary_EncoderReversed_Wheel, val.encoder_reversed_wheel); //bool
 			//Rotary Pot---------------------------------------------------------------
 			//PUT_NUMBER(Rotary_Pot_offset, val.pot_offset);
+			PUT_NUMBER(Pot4_anti_backlash_scaler,0.95);
 		}
 		#pragma endregion
 

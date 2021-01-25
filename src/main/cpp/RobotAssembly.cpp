@@ -1613,7 +1613,11 @@ private:
   void SimulatorTimeSlice()
   {
         const double CurrentTime = m_Timer.GetFPGATimestamp();
+        #if 1
         const double DeltaTime = CurrentTime - m_simLastTime;
+        #else
+        const double DeltaTime=0.01;
+        #endif
         m_simLastTime = CurrentTime;
 		//sanity check
 		//frc::SmartDashboard::PutNumber("time_delta",DeltaTime);
