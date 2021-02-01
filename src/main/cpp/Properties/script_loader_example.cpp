@@ -597,6 +597,16 @@ private:
 			PUT_BOOL(Rotary_PID_Console_Dump, val.show_pid_dump); //bool
 			PUT_BOOL(Rotary_UseAggressiveStop, val.use_aggressive_stop); //bool
 			PUT_BOOL(Rotary_EncoderReversed_Wheel, val.encoder_reversed_wheel); //bool
+
+			PUT_NUMBER(Pot4_anti_backlash_scaler,0.0);
+			PUT_NUMBER(Pot4_dead_zone, 0.13); //see how this relates to speed loss constant
+			PUT_NUMBER(Pot4_free_speed_rad, 5880 * (1.0 / 60.0) * Pi2);
+			PUT_NUMBER(Pot4_gear_box_effeciency, 0.9);
+			PUT_NUMBER(Pot4_gear_reduction, 1.0 / 9.0);
+			PUT_NUMBER(Pot4_mass, Pounds2Kilograms(3.0));
+			PUT_NUMBER(Pot4_RadiusOfConcentratedMass, Inches2Meters(1.12));  //Motor radius
+			PUT_NUMBER(Pot4_AngularInertiaCoefficient, 0.5);  //using a solid cylinder or disc)
+			PUT_NUMBER(Pot4_stall_torque_NM, 3.36);
 		}
 		#pragma endregion
 		#pragma region _Average Drive Motor_
@@ -663,6 +673,7 @@ private:
 			PUT_NUMBER(Ship_1D_MaxAccelForward, 75.0);
 			#pragma region _Simulation Acceleraton_
 			{
+				#pragma region _for Pot2 only_
 				//In here we compute the acceleration of the simulation, our motion profile can be less than this but not more otherwise we overshoot
 				//I'll write out each variable so that we can tweak the final value and compare against actual
 				//For start we are using a 775pro motor with its rated torque
@@ -672,19 +683,29 @@ private:
 				const double gear_box_effeciency = 0.65;
 				//I'm going to be more conservative and give more mass to account for the weight bearing on the wheel
 				//const double mass = Pounds2Kilograms * 3.06;
-				const double mass = Pounds2Kilograms * 6.0;
+				const double mass = Pounds2Kilograms * 1.0;
 				Framework::Base::PhysicsEntity_1D motor_wheel_model;
 				motor_wheel_model.SetMass(mass);
-				motor_wheel_model.SetAngularInertiaCoefficient(0.4);  //using a solid sphere
-				motor_wheel_model.SetRadiusOfConcentratedMass(Feet2Meters(4.42*0.5));
+				motor_wheel_model.SetAngularInertiaCoefficient(0.5);  //Just motor
+				motor_wheel_model.SetRadiusOfConcentratedMass(Inches2Meters(1.12));
 				// t=Ia 
 				//I=sum(m*r^2) or sum(AngularCoef*m*r^2)
-				const double MaxAccel_simulation = motor_wheel_model.GetAngularAcceleration(stall_torque * (1.0/gear_reduction) * gear_box_effeciency);
+				const double MaxAccel_simulation = motor_wheel_model.GetAngularAcceleration(stall_torque * (1.0 / gear_reduction) * gear_box_effeciency);
 				PUT_NUMBER(Ship_1D_MaxAccel_simulation, MaxAccel_simulation);
+				#pragma endregion
+
+				//Note: we have some adjusted properties for Pot4 in here, so we keep these separate from Pot 2
+				PUT_NUMBER(Pot4_stall_torque_NM, 0.71);
+				PUT_NUMBER(Pot4_gear_reduction, (1.0 / 81.0)* (3.0 / 7.0));
+				PUT_NUMBER(Pot4_gear_box_effeciency, 0.65);
+				//These are difficult to tune, especially the radius of concentrated mass, but dictate the rate acceleration
+				PUT_NUMBER(Pot4_mass, 0.34);
+				PUT_NUMBER(Pot4_AngularInertiaCoefficient,Pounds2Kilograms(0.5));  //solid cylinder
+				PUT_NUMBER(Pot4_RadiusOfConcentratedMass, Inches2Meters(0.25)); //these are tuned via spread sheet
 			}
 			#pragma endregion
 			//PUT_NUMBER(Rotary_InverseMaxAccel, 0.0);
-			PUT_NUMBER(Rotary_InverseMaxDecel, 1.0/600.0);
+			//PUT_NUMBER(Rotary_InverseMaxDecel, 1.0/600.0);
 			//PUT_NUMBER(Rotary_InverseMaxDecel, val.InverseMaxDecel);
 			PUT_NUMBER(Rotary_Positive_DeadZone, 0.11);
 			PUT_NUMBER(Rotary_Negative_DeadZone, 0.11);
@@ -700,7 +721,6 @@ private:
 			//PUT_BOOL(Rotary_EncoderReversed_Wheel, val.encoder_reversed_wheel); //bool
 			//Rotary Pot---------------------------------------------------------------
 			//PUT_NUMBER(Rotary_Pot_offset, val.pot_offset);
-			PUT_NUMBER(Pot4_anti_backlash_scaler,0.95);
 		}
 		#pragma endregion
 

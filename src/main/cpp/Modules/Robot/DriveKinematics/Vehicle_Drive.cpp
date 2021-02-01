@@ -4,10 +4,36 @@
 //#include "../../../../Base/Vec2d.h"
 #include "../../../Base/Misc.h"
 #include "Vehicle_Drive.h"
+#include "../../../Properties/RegistryV1.h"
 
 
 using namespace Module::Robot;
-
+#pragma region _Drive Properties_
+void Drive_Properties::Init(const Framework::Base::asset_manager* asset_properties)
+{
+	Vec2D wheel_dimensions(Inches2Meters(24), Inches2Meters(24));
+	//defaults
+	m_WheelBase = wheel_dimensions[0];
+	m_TrackWidth = wheel_dimensions[1];
+	if (asset_properties)
+	{
+		using namespace ::properties::registry_v1;
+		using namespace Framework::Base;
+		std::string constructed_name;
+		//Default param in inches, then result is in meters	
+		#define GET_NUMBER_In2Meter(x,y) \
+				constructed_name = csz_##x; \
+				y = Inches2Meters(asset_properties->get_number(constructed_name.c_str(), Meters2Inches(y)));
+		GET_NUMBER_In2Meter(Drive_WheelBase_in, m_WheelBase);
+		GET_NUMBER_In2Meter(Drive_TrackWidth_in, m_TrackWidth);
+		wheel_dimensions[0] = m_WheelBase;
+		wheel_dimensions[1] = m_TrackWidth;
+	}
+	//finished with the macro
+	#undef GET_NUMBER_In2Meter
+	m_TurningDiameter = wheel_dimensions.length();
+}
+#pragma endregion
 #pragma region _Tank Drive_
   /***********************************************************************************************************************************/
  /*															Tank_Drive																*/
@@ -20,11 +46,11 @@ void Tank_Drive::ResetPos()
 
 void Tank_Drive::UpdateVelocities(double FWD, double RCW)
 {
-	const double D= m_props.TurningDiameter;
+	const double D= m_props.GetTurningDiameter();
 	//L is the vehicle�s wheelbase
-	const double L= m_props.WheelBase;
+	const double L= m_props.GetWheelBase();
 	//W is the vehicle�s track width
-	const double W= m_props.TrackWidth;
+	const double W= m_props.GetTrackWidth();
 	//For skid steering we need more speed to compensate
 	const double inv_skid=1.0/cos(atan2(L,W));
 	//Convert radians into revolutions per second
@@ -48,7 +74,7 @@ void Inv_Tank_Drive::ResetPos()
 
 void Inv_Tank_Drive::InterpolateVelocities(double LeftLinearVelocity, double RightLinearVelocity)
 {
-	const double D = m_props.TurningDiameter;
+	const double D = m_props.GetTurningDiameter();
 
 	//const double FWD = (LeftLinearVelocity*cos(1.0)+RightLinearVelocity*cos(1.0))/2.0;
 	const double FWD = (LeftLinearVelocity + RightLinearVelocity) * 0.5;
@@ -59,9 +85,9 @@ void Inv_Tank_Drive::InterpolateVelocities(double LeftLinearVelocity, double Rig
 	//const double HalfDimLength=GetWheelDimensions().length()/2;
 
 	//L is the vehicle�s wheelbase
-	const double L = m_props.WheelBase;
+	const double L = m_props.GetWheelBase();
 	//W is the vehicle�s track width
-	const double W = m_props.TrackWidth;
+	const double W = m_props.GetTrackWidth();
 
 	const double skid = cos(atan2(L, W));
 	const double omega = ((LeftLinearVelocity*skid) + (RightLinearVelocity*-skid)) * 0.5;
@@ -89,25 +115,39 @@ void Swerve_Drive::ResetPos()
 void Swerve_Drive::UpdateVelocities(double FWD, double STR, double RCW)
 {
 	//L is the vehicle�s wheelbase
-	const double L = m_props.WheelBase;
+	const double L = m_props.GetWheelBase();
 	//W is the vehicle�s track width
-	const double W = m_props.TrackWidth;
+	const double W = m_props.GetTrackWidth();
 
 	//const double R = sqrt((L*L)+(W*W));
-	const double R = m_props.TurningDiameter;
+	const double R = m_props.GetTurningDiameter();
 
 	//Allow around 2-3 degrees of freedom for rotation.  While manual control worked fine without it, it is needed for
 	//targeting goals (e.g. follow ship)
 
-	double RPS = RCW / Pi2;
-	RCW = RPS * (Pi * R);  //R is really diameter
+	//RCW (Rotate ClockWise) is angular velocity in radians, and will be converted to linear velocity (unrolled into a line)
+	const double RPS = RCW / Pi2; //rotations per second
+	const double rotation_linear = RPS * (Pi * R);  //R is really diameter
 
-	const double A = STR - RCW * (L / R);
-	const double B = STR + RCW * (L / R);
-	const double C = FWD - RCW * (W / R);
-	const double D = FWD + RCW * (W / R);
+	//Provide component variables for each quad vector, this can be reduced to half since
+	//The same values can be shared like so:
+	//      ^
+	//      RCW---> (as linear)      .  \
+	// / BD | BC \                  /    .
+	// |----+----||-->--STR->       .    /    
+	// \ AD | AC /|RCW               \  .
+	//  --------- V
+
+	//Each component starts with the common position velocity vector and then add the rotation in linear form scaled down by 
+	//how close the wheel's position is to perpendicular tangent of the turning diameter's circle
+	const double A = STR - rotation_linear * (L / R);   //X component of rear wheels
+	const double B = STR + rotation_linear * (L / R);   //X component of front wheels
+	const double C = FWD - rotation_linear * (W / R);   //Y component of starboard side
+	const double D = FWD + rotation_linear * (W / R);   //Y component of port side
 	SwerveVelocities::uVelocity::Explicit& _ = m_Velocities.Velocity.Named;
 
+	//With our X and Y components get the magnitude and direction of each vector:
+	//Starting with magnitude via distance formula (a.k.a. Pythagorean theorem)
 	_.sFL = sqrt((B * B) + (D * D));
 	_.sFR = sqrt((B * B) + (C * C));
 	_.sRL = sqrt((A * A) + (D * D));
@@ -119,13 +159,13 @@ void Swerve_Drive::UpdateVelocities(double FWD, double STR, double RCW)
 	//Note: when adding together to check they must not be negative otherwise they could cancel each other out
 	if (!IsZero(fabs(FWD) + fabs(STR) + fabs(RCW)))
 	{
-		_.aFL = atan2(B, D);
+		_.aFL = atan2(B, D);  //Note: atan2 works where 0 points right, so we swap parameters to have 0 point up
 		_.aFR = atan2(B, C);
 		_.aRL = atan2(A, D);
 		_.aRR = atan2(A, C);
 
-		//the angle velocities can be sensitive so if the RCW is zero then we should have a zero tolerance test
-		if (RCW == 0.0)
+		//the angle velocities can be sensitive so if the rotation_linear is zero then we should have a zero tolerance test
+		if (rotation_linear == 0.0)
 		{
 			_.aFL = IsZero(_.aFL) ? 0.0 : _.aFL;
 			_.aFR = IsZero(_.aFR) ? 0.0 : _.aFR;
@@ -134,11 +174,11 @@ void Swerve_Drive::UpdateVelocities(double FWD, double STR, double RCW)
 		}
 	}
 	#if 0
-	DOUT2("%f %f %f",FWD,STR,RCW);
+	DOUT2("%f %f %f",FWD,STR,rotation_linear);
 	DOUT4("%f %f %f %f",_.sFL,_.sFR,_.sRL,_.sRR);
 	DOUT5("%f %f %f %f",_.aFL,_.aFR,_.aRL,_.aRR);
 	#endif
-	//DOUT4("%f %f %f",FWD,STR,RCW);  //Test accuracy
+	//DOUT4("%f %f %f",FWD,STR,rotation_linear);  //Test accuracy
 
 }
 #pragma endregion
@@ -152,11 +192,11 @@ void Inv_Swerve_Drive::InterpolateVelocities(const SwerveVelocities &Velocities)
 {
 	const SwerveVelocities::uVelocity::Explicit &_ = Velocities.Velocity.Named;
 	//L is the vehicle�s wheelbase
-	const double L = m_props.WheelBase;
+	const double L = m_props.GetWheelBase();
 	//W is the vehicle�s track width
-	const double W = m_props.TrackWidth;
+	const double W = m_props.GetTrackWidth();
 
-	const double D = m_props.TurningDiameter;
+	const double D = m_props.GetTurningDiameter();
 
 	const double FWD = (_.sFR*cos(_.aFR) + _.sFL*cos(_.aFL) + _.sRL*cos(_.aRL) + _.sRR*cos(_.aRR))*0.25;
 
