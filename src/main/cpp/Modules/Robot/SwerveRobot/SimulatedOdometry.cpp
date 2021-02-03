@@ -1483,6 +1483,12 @@ public:
 		//Before we apply the forces grab the current velocities to compute the new forces
 		const Vec2D last_payload_velocity = m_Payload.GetLinearVelocity();
 		const double last_payload_angular_velocity = m_Payload.GetAngularVelocity();
+
+		//Apply our torque forces now, before working with friction forces
+		//Note: each vector was averaged (and the multiply by 0.25 was the last operation)
+		m_Payload.ApplyFractionalForce(Vec2D(m_Input.GetLocalVelocityX(), m_Input.GetLocalVelocityY()), dTime_s);
+		m_Payload.ApplyFractionalTorque(m_Input.GetAngularVelocity(), dTime_s);
+
 		//Check direction, while the controls may not take centripetal forces into consideration, or if in open loop and no feedback
 		//It is possible to skid, where the intended direction of travel doesn't match the existing, to simulate, we localize the
 		//the existing velocity to the new intended direction of travel, and then apply friction force to the x component which is force normal
@@ -1494,13 +1500,15 @@ public:
 			//Use this heading to rotate our velocity to global
 			const double IntendedDirection=atan2(IntendedForces_normalized[0], IntendedForces_normalized[1]);
 			const Vec2D local_payload_velocity = m_Payload.GetLinearVelocity();
-			const Vec2D global_payload_velocity = LocalToGlobal(IntendedDirection, local_payload_velocity);
-			const double Skid_Velocity = global_payload_velocity.x();  //velocity to apply friction force to can be in either direction
+			//Note: aligned_to_Intended this is the current velocity rotated to align with the intended velocity, when the current velocity direction
+			//is mostly the same as the intended, the Y component will consume it.
+			const Vec2D aligned_to_Intended_velocity = GlobalToLocal(IntendedDirection, local_payload_velocity);
+			const double Skid_Velocity = aligned_to_Intended_velocity.x();  //velocity to apply friction force to can be in either direction
 			m_Friction.SetVelocity(Skid_Velocity);
-			const double friction_x = m_Friction.GetFrictionalForce(dTime_s);
+			const double friction_x = m_Friction.GetFrictionalForce(dTime_s,0);
 			double friction_y = 0.0;
 			//Test for friction Y (only when controls for Y are idle)
-			if (IntendedForces.y()==0.0)
+			if (IsZero(IntendedForces.y(),0.01))
 			{
 				double combined_velocity_magnitude=0.0;
 				for (size_t i = 0; i < 4; i++)
@@ -1508,24 +1516,43 @@ public:
 				//while we are here... if we are stopped then we need to do the same for the y Component
 				if (IsZero(combined_velocity_magnitude,0.01))
 				{
-					m_Friction.SetVelocity(global_payload_velocity.y());
-					friction_y = m_Friction.GetFrictionalForce(dTime_s);
+					m_Friction.SetVelocity(aligned_to_Intended_velocity.y());
+					friction_y = m_Friction.GetFrictionalForce(dTime_s,0);
 				}
 			}
 			//now to get friction force to be applied to x component
 			const Vec2D global_friction_force(friction_x, friction_y);
-			const Vec2D local_friction_force = GlobalToLocal(IntendedDirection, global_friction_force);
+			const Vec2D local_friction_force = LocalToGlobal(IntendedDirection, global_friction_force);
+			//We can now consume these forces into the payload
 			m_Payload.ApplyFractionalForce(local_friction_force, dTime_s);
 			//Same goes for the angular velocity as this should not be sliding around
-			if (IsZero(m_Payload.GetAngularVelocity(), 0.01))
+			if (IsZero(m_Input.GetAngularVelocity(), 0.01)&&(m_Payload.GetAngularVelocity()!=0.00))
 			{
-				m_Payload.SetAngularVelocity(0.0);
+				const double AngularVelocity = m_Payload.GetAngularVelocity();
+				//Avoid small fractions by putting a bite in the threshold
+				if (fabs(AngularVelocity) < 0.0001)
+				{
+					m_Payload.SetAngularVelocity(0.0);
+				}
+				else
+				{
+					//The way to think of this is that in space something could spin forever and it is friction that would stop it
+					//lack of friction (like a top or something on bearings demonstrates this as well) once the robot spins it is
+					//the friction of the wheels that stops the spin.  To be compatible to our units of force (which work with KMS i.e. meters)
+					//we convert our angular velocity into linear compute this force and scale back down
+					//force = mass * acceleration, acceleration = vel_a-vel_b, vel = distance / time
+					//proof... using 1 for time distance a is 3 and distance b is 2.    3-2 (meters) a =1 meters per second square
+					//for radians, for now let's assume Pi * D= 2.   1/D(3-2)= 1/D  so we can scale this back down to radians, where D is the turning diameter
+					const double turning_diameter = m_Input.GetDriveProperties().GetTurningDiameter();
+					const double to_linear = Pi * turning_diameter;
+					const double rot_linear = AngularVelocity * to_linear;
+					assert(turning_diameter != 0.0);  //sanity check
+					m_Friction.SetVelocity(rot_linear);
+					const double friction_rot = m_Friction.GetFrictionalForce(dTime_s,0) / to_linear; //as radians
+					m_Payload.ApplyFractionalTorque(friction_rot, dTime_s);
+				}
 			}
 		}
-		//We can now consume these forces into the payload
-		//Note: each vector was averaged (and the multiply by 0.25 was the last operation)
-		m_Payload.ApplyFractionalForce(Vec2D(m_Input.GetLocalVelocityX(), m_Input.GetLocalVelocityY()), dTime_s);
-		m_Payload.ApplyFractionalTorque(m_Input.GetAngularVelocity(), dTime_s);
 		// we could m_Payload.TimeChangeUpdate() at some point
 		const Vec2D current_payload_velocity = m_Payload.GetLinearVelocity();
 		//printf("--%.2f,", current_payload_velocity.y());
