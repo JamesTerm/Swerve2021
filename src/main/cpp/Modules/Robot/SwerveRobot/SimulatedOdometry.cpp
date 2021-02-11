@@ -1187,7 +1187,7 @@ class Potentiometer_Tester4
 private:
 	#pragma region _members_
 	Framework::Base::PhysicsEntity_1D m_motor_wheel_model;
-	double m_free_speed_rad = 18730 * (1.0/60.0) * Pi2; //radians per second of motor
+	double m_free_speed_rad = 18730 * (1.0 / 60.0) * Pi2; //radians per second of motor
 	double m_stall_torque = 0.71;  //Nm
 	double m_gear_reduction = (1.0 / 81.0) * (3.0 / 7.0);
 	//This will account for the friction, and the load torque lever arm
@@ -1199,11 +1199,11 @@ private:
 	double m_dead_zone = 0.10; //this is the amount of voltage to get motion can be tested
 	double m_anti_backlash_scaler = 0.85; //Any momentum beyond the steady state will be consumed 1.0 max is full consumption
 	double m_Time_s = 0.010;
-	double m_Heading=0.0;
+	double m_Heading = 0.0;
 	size_t m_InstanceIndex = 0;  //for ease of debugging
 	#pragma endregion
 public:
-	void Initialize(size_t index,const Framework::Base::asset_manager* props = NULL, 
+	void Initialize(size_t index, const Framework::Base::asset_manager* props = NULL,
 		const char* prefix = properties::registry_v1::csz_CommonSwivel_)
 	{
 		if (props)
@@ -1213,10 +1213,10 @@ public:
 			#define GET_NUMBER(x,y) \
 			constructed_name = prefix, constructed_name += csz_##x; \
 			y = props->get_number(constructed_name.c_str(), y);
-			
+
 			GET_NUMBER(Pot4_free_speed_rad, m_free_speed_rad);
-			GET_NUMBER(Pot4_stall_torque_NM,m_stall_torque);
-			GET_NUMBER(Pot4_gear_reduction,m_gear_reduction);
+			GET_NUMBER(Pot4_stall_torque_NM, m_stall_torque);
+			GET_NUMBER(Pot4_motor_gear_reduction, m_gear_reduction);
 			GET_NUMBER(Pot4_gear_box_effeciency, m_gear_box_effeciency);
 			GET_NUMBER(Pot4_mass, m_mass);
 			GET_NUMBER(Pot4_RadiusOfConcentratedMass, m_RadiusOfConcentratedMass);
@@ -1227,7 +1227,7 @@ public:
 			#undef GET_NUMBER
 		}
 		m_motor_wheel_model.SetMass(m_mass);
-		m_motor_wheel_model.SetAngularInertiaCoefficient(m_AngularInertiaCoefficient); 
+		m_motor_wheel_model.SetAngularInertiaCoefficient(m_AngularInertiaCoefficient);
 		m_motor_wheel_model.SetRadiusOfConcentratedMass(m_RadiusOfConcentratedMass);
 		m_InstanceIndex = index;
 	}
@@ -1238,8 +1238,8 @@ public:
 		//Important: The only one voltage factor here will establish the direction of torque
 		const double max_torque = m_stall_torque * Voltage;
 		//The speed ratio is a ratio of speed to "max speed" of a voltage scaled motor curve and must only be magnitude
-		const double speed_ratio = fabs(Voltage)>0.0 ? 
-			std::max(1.0-(fabs(m_motor_wheel_model.GetVelocity()) / (m_free_speed_rad * fabs(Voltage))),0.0) : 0.0;
+		const double speed_ratio = fabs(Voltage) > 0.0 ?
+			std::max(1.0 - (fabs(m_motor_wheel_model.GetVelocity()) / (m_free_speed_rad * fabs(Voltage))), 0.0) : 0.0;
 		const double torque = max_torque * speed_ratio;
 		return torque;
 	}
@@ -1272,13 +1272,13 @@ public:
 				//Note: this could work without reduction if next_current_velocity didn't have it as well, but it is easier to read with it in
 				const double steady_state_velocity = Voltage * m_free_speed_rad; //for now not factoring in efficiency
 				//both the voltage and velocity must be in the same direction... then see if we have deceleration
-				if  ((steady_state_velocity * next_current_velocity > 0.0) && (fabs(next_current_velocity)>fabs(steady_state_velocity)))
+				if ((steady_state_velocity * next_current_velocity > 0.0) && (fabs(next_current_velocity) > fabs(steady_state_velocity)))
 				{
 					//factor all in to evaluate note we restore direction at the end
 					const double anti_backlash_accel = (fabs(next_current_velocity) - fabs(steady_state_velocity)) / m_Time_s;
 					const double anti_backlash_torque = m_motor_wheel_model.GetMomentofInertia() * anti_backlash_accel;
 					//Backlash only kicks in when the excess momentum exceed the dead zone threshold
-					adverse_torque += anti_backlash_torque*m_anti_backlash_scaler;
+					adverse_torque += anti_backlash_torque * m_anti_backlash_scaler;
 				}
 				//just compute in magnitude, then restore the opposite direction of the velocity
 				const double adverse_accel_limit = fabs(next_current_velocity) / m_Time_s; //acceleration in radians enough to stop motion
@@ -1295,7 +1295,7 @@ public:
 		//Note: these are broken up for SwerveEncoders_Simulator4 to obtain both torques before applying them
 		const double voltage_torque = GetTorqueFromVoltage(Voltage);
 		m_motor_wheel_model.ApplyFractionalTorque(voltage_torque, m_Time_s);
-		const double adverse_torque = GetMechanicalRestaintTorque(Voltage,m_motor_wheel_model.GetVelocity());
+		const double adverse_torque = GetMechanicalRestaintTorque(Voltage, m_motor_wheel_model.GetVelocity());
 		m_motor_wheel_model.ApplyFractionalTorque(adverse_torque, m_Time_s);
 	}
 	double GetPotentiometerCurrentPosition() const
@@ -1310,25 +1310,29 @@ public:
 		m_Heading += PositionDisplacement * m_gear_reduction;  //velocity is motor, so convert to output rate with the gear reduction
 	}
 	//This is broken up so that the real interface does not have to pass time
-	void SetTimeDelta(double dTime_s) 
-	{ 
-		m_Time_s = dTime_s; 
+	void SetTimeDelta(double dTime_s)
+	{
+		m_Time_s = dTime_s;
 	}
 	void ResetPos()
 	{
 		m_motor_wheel_model.ResetVectors();
 	}
-	Framework::Base::PhysicsEntity_1D& GetWheelModel_rw() 
+	Framework::Base::PhysicsEntity_1D& GetWheelModel_rw()
 	{
 		return m_motor_wheel_model;
 	}
-	double GetMaxSpeed(bool with_reduction=false) const
+	double GetMaxSpeed(bool with_reduction = false) const
 	{
-		return m_free_speed_rad * (with_reduction?m_gear_reduction:1.0);
+		return m_free_speed_rad * (with_reduction ? m_gear_reduction : 1.0);
 	}
 	double GetGearReduction() const
 	{
 		return m_gear_reduction;
+	}
+	double GetGearBoxEffeciency() const
+	{
+		return m_gear_box_effeciency;
 	}
 };
 
@@ -1353,6 +1357,7 @@ private:
 	std::function< SwerveVelocities&()> m_CurrentVelocities_callback;
 	std::function<SwerveVelocities()> m_VoltageCallback;
 	Inv_Swerve_Drive m_Input;
+	double m_KineticFriction = 0.50; //this looks about right, but we can try to fix
 	class SwerveDrive_Plus : public Swerve_Drive
 	{
 	private:
@@ -1399,13 +1404,16 @@ private:
 		}
 	};
 	SwerveDrive_Plus m_Output;
+	Swerve_Drive m_TestForce; //used to measure acceleration
 	double m_WheelDiameter_In=4.0;
+	bool m_IsSkidding=false; //cache last state to determine or force normal
 	#pragma endregion
 public:
 	virtual void Initialize(const Framework::Base::asset_manager* props = NULL)
 	{
 		//TODO get properties for our local members
 		m_Input.Init(props);
+		m_TestForce.Init(props);
 		m_Output.Init(props);
 		Framework::Base::asset_manager DefaultMotorProps;
 		using namespace properties::registry_v1;
@@ -1431,7 +1439,7 @@ public:
 		m_Friction.SetMass(Pounds2Kilograms(148));
 		//May want friction coefficients as well
 		m_Friction.SetStaticFriction(1.0);  //rated from wheels
-		m_Friction.SetKineticFriction(0.5);  //not so easy to measure
+		m_Friction.SetKineticFriction(m_KineticFriction);  //not so easy to measure
 	}
 	void SetVoltageCallback(std::function<SwerveVelocities()> callback)
 	{
@@ -1441,74 +1449,129 @@ public:
 	{
 		using namespace Framework::Base;
 		//Make sure the potentiometer angles are set in current velocities before calling in here
-		//TODO in this first iteration all forces are transferred in a non-skid state, but afterwards
-		//we should look into how to handle skid states
-		//First let's round up the forces from each encoder
-		SwerveVelocities ForcesForPayload = m_CurrentVelocities_callback();
+		SwerveVelocities InitialVelocitiesForPayload = m_CurrentVelocities_callback();
 		for (size_t i = 0; i < 4; i++)
 		{
 			const double Voltage = m_VoltageCallback().Velocity.AsArray[i];
 			Potentiometer_Tester4& encoder = m_Encoders[i];
-			double Torque = encoder.GetTorqueFromVoltage(Voltage);
-			//encoder.GetWheelModel_rw().ApplyFractionalTorque(encoder.GetMechanicalRestaintTorque(m_VoltageCallback().Velocity.AsArray[i]), dTime_s);
-			//Work out the new velocity for this to apply correct torque
-			double predicted_velocity = encoder.GetWheelModel_rw().GetVelocity();  //start with what we have and add in the new torque
-			double pv_AngularAcceleration = encoder.GetWheelModel_rw().GetAngularAcceleration(Torque);
-			predicted_velocity += pv_AngularAcceleration * dTime_s;
-			//The predicted velocity cannot be greater than the max velocity, (no reduction applied)
-			predicted_velocity = std::min(predicted_velocity , encoder.GetMaxSpeed());
-			Torque += encoder.GetMechanicalRestaintTorque(Voltage,predicted_velocity);
-
-			//To translate for torque at wheel, we first need to apply the mechanical advantage of the inverse gear reduction
-			//Then extract the force applied
-			//Since Torque = F X R we'll isolate force by dividing out the radius
-			const double Force = (Torque * (1.0/encoder.GetGearReduction()) ) / Inches2Meters(m_WheelDiameter_In * 0.5);
-
-			//We'll try this another way to check since torque is also Ia if we isolate a, we can multiply by the radius for linear velocity force.
-			//const double Force  = (Torque / encoder.GetWheelModel_rw().GetMomentofInertia()) * Inches2Meters(m_WheelDiameter_In * 0.5);
-
-			ForcesForPayload.Velocity.AsArray[i] = Force;
-			//if (Voltage > 0.99)
-			//	int x = 4;
-			#if 0
-			encoder.GetWheelModel_rw().ApplyFractionalTorque(Torque, dTime_s);
+			encoder.UpdatePotentiometerVoltage(Voltage);
+			//This is our initial velocity to submit to payload
 			const double LinearVelocity = encoder.GetWheelModel_rw().GetVelocity() * encoder.GetGearReduction() *
 				Inches2Meters(m_WheelDiameter_In * 0.5);
+
+			#if 0
 			m_CurrentVelocities_callback().Velocity.AsArray[i] = LinearVelocity;
 			return;
+			#else
+			InitialVelocitiesForPayload.Velocity.AsArray[i] = LinearVelocity;
 			#endif
 		}
-		//Now we can interpolate the force vectors with the same kinematics of the drive
-		m_Input.InterpolateVelocities(ForcesForPayload);
+		//Now we can interpolate the velocity vectors with the same kinematics of the drive
+		m_Input.InterpolateVelocities(InitialVelocitiesForPayload);
+
+		//printf("force=%.2f\n",ForcesForPayload.Velocity.AsArray[0]);
 		//Before we apply the forces grab the current velocities to compute the new forces
 		const Vec2D last_payload_velocity = m_Payload.GetLinearVelocity();
 		const double last_payload_angular_velocity = m_Payload.GetAngularVelocity();
+		const double drive_train_efficiency = m_Encoders[0].GetGearBoxEffeciency();
+		//Now to convert the inputs velocities into force, which is the velocity change (per second) and divide out the time
+		//to get our acceleration impulse, finally multiple by mass for the total.
+		//Note: I may need to consider conservation of momentum here, but for now scaling down using drive train efficiency does add the latency
+		Vec2D InputAsForce = (Vec2D(m_Input.GetLocalVelocityX(), m_Input.GetLocalVelocityY()) - last_payload_velocity) / dTime_s * 
+			m_Payload.GetMass() * drive_train_efficiency;
+		double InputAsTorque = (m_Input.GetAngularVelocity() - last_payload_angular_velocity) / dTime_s * 
+			m_Payload.GetMomentofInertia() * drive_train_efficiency;
+
+		double summed_y_force = 0.0;
+		//see if we are decelerating
+		const Vec2D current_local_velocity(m_Input.GetLocalVelocityX(), m_Input.GetLocalVelocityY());
+		const double current_local_speed = current_local_velocity.length();  //aka magnitude
+		const double last_payload_speed = last_payload_velocity.length();
+		bool IsDecelerating = current_local_speed < last_payload_speed;
+		if (IsDecelerating)
+		{
+			//Make sure the rotation isn't overpowering this indication
+			if (fabs(m_Input.GetAngularVelocity()) > fabs(last_payload_angular_velocity))
+			{
+				//compare apples to apples
+				const double angular_velocity_asLinear = m_Input.GetAngularVelocity() * Pi * m_Input.GetDriveProperties().GetTurningDiameter();
+				if (fabs(angular_velocity_asLinear) > current_local_speed)
+					IsDecelerating = false;
+			}
+		}
+		if ((!IsDecelerating) && (fabs(m_Input.GetAngularVelocity()) < fabs(last_payload_angular_velocity)))
+		{
+			IsDecelerating = true; //kind of redundant but makes the logic a mirror reflection of above
+			if (current_local_speed > last_payload_speed)
+			{
+				//compare oranges to oranges
+				const double angular_velocity_asLinear = m_Input.GetAngularVelocity() * Pi * m_Input.GetDriveProperties().GetTurningDiameter();
+				if (current_local_speed > fabs(angular_velocity_asLinear))
+					IsDecelerating = false;
+			}
+		}
+
+		if (!IsDecelerating)
+		{
+			//Testing the total force start by adding up the total velocity delta
+			m_TestForce.UpdateVelocities(m_Input.GetLocalVelocityY() - last_payload_velocity.y(), 
+				m_Input.GetLocalVelocityX() - last_payload_velocity.x(), m_Input.GetAngularVelocity() - last_payload_angular_velocity);
+			double max_wheel_velocity=0.0;
+			for (size_t i = 0; i < 4; i++)
+				if (m_TestForce.GetIntendedVelocitiesFromIndex(i) > max_wheel_velocity)
+					max_wheel_velocity = m_TestForce.GetIntendedVelocitiesFromIndex(i);
+			//sum all 4 wheels... if one of them exceeds force they all do
+			summed_y_force = max_wheel_velocity / dTime_s * m_Payload.GetMass() * drive_train_efficiency;
+			//printf("|sum=%.2f,y=%.2f|",summed_y_force,InputAsForce.y());
+		}
+		//Now we can easily evaluate the y-component of force to see if we have a skid, for now we only care about linear motion
+		//as rotation with motion only impacts the x-component of the wheels and is addressed below
+		//The spin in place may be added here later, but leaving out for now as this is not a typical stress that needs to be simulated
+		const bool IsSkidding = fabs(summed_y_force) > m_Friction.GetForceNormal(g,m_IsSkidding?1:0);
+		const int FrictionMode = IsSkidding ? 1 : 0;
+		//Scale down even further if we are skidding
+		if (IsSkidding)
+		{
+			#if 0
+			static int counter = 0;
+			printf("[%d]skid [%.2f>%.2f]\n",counter++,InputAsForce.y(),m_Friction.GetForceNormal(g, m_IsSkidding ? 1 : 0));
+			#endif
+			//the scaled amount is fudged to what looks about right since the summed forces is not quite accurate
+			const double scale = m_Friction.GetForceNormal(g, m_IsSkidding ? 1 : 0) / std::max(fabs(summed_y_force)*2.0,m_KineticFriction);
+			//This may be a bit more scale than in reality but should be effective
+			InputAsForce *= scale;
+			InputAsTorque *= scale;
+		}
+		m_IsSkidding = IsSkidding; //stays skid until we slow down enough below the kinetic friction
 
 		//Apply our torque forces now, before working with friction forces
 		//Note: each vector was averaged (and the multiply by 0.25 was the last operation)
-		m_Payload.ApplyFractionalForce(Vec2D(m_Input.GetLocalVelocityX(), m_Input.GetLocalVelocityY()), dTime_s);
-		m_Payload.ApplyFractionalTorque(m_Input.GetAngularVelocity(), dTime_s);
+		m_Payload.ApplyFractionalForce(InputAsForce, dTime_s);
+		m_Payload.ApplyFractionalTorque(InputAsTorque, dTime_s);
+		//printf("|pay_t=%.2f|", m_Input.GetAngularVelocity());
 
 		//Check direction, while the controls may not take centripetal forces into consideration, or if in open loop and no feedback
 		//It is possible to skid, where the intended direction of travel doesn't match the existing, to simulate, we localize the
 		//the existing velocity to the new intended direction of travel, and then apply friction force to the x component which is force normal
 		//by the kinetic friction coefficient.  This has to clip as the x components velocity reaches zero
 		{
-			const Vec2D IntendedForces = Vec2D(m_Input.GetLocalVelocityX(),m_Input.GetLocalVelocityY());
-			Vec2D IntendedForces_normalized(m_Input.GetLocalVelocityX(), m_Input.GetLocalVelocityY());
-			double magnitude = IntendedForces_normalized.normalize();
+			const Vec2D IntendedVelocities = Vec2D(m_Input.GetLocalVelocityX(),m_Input.GetLocalVelocityY());
+			Vec2D IntendedVelocities_normalized(m_Input.GetLocalVelocityX(), m_Input.GetLocalVelocityY());
+			double magnitude = IntendedVelocities_normalized.normalize();
 			//Use this heading to rotate our velocity to global
-			const double IntendedDirection=atan2(IntendedForces_normalized[0], IntendedForces_normalized[1]);
+			const double IntendedDirection=atan2(IntendedVelocities_normalized[0], IntendedVelocities_normalized[1]);
 			const Vec2D local_payload_velocity = m_Payload.GetLinearVelocity();
 			//Note: aligned_to_Intended this is the current velocity rotated to align with the intended velocity, when the current velocity direction
 			//is mostly the same as the intended, the Y component will consume it.
 			const Vec2D aligned_to_Intended_velocity = GlobalToLocal(IntendedDirection, local_payload_velocity);
+			const Vec2D IntendedVelocity_fromWheelAngle = GlobalToLocal(IntendedDirection, IntendedVelocities);
 			const double Skid_Velocity = aligned_to_Intended_velocity.x();  //velocity to apply friction force to can be in either direction
 			m_Friction.SetVelocity(Skid_Velocity);
-			const double friction_x = m_Friction.GetFrictionalForce(dTime_s,0);
+			const double friction_x = m_Friction.GetFrictionalForce(dTime_s, FrictionMode);
+			//printf("|fnx=%.2f|",friction_x);
 			double friction_y = 0.0;
 			//Test for friction Y (only when controls for Y are idle)
-			if (IsZero(IntendedForces.y(),0.01))
+			if (IsZero(IntendedVelocity_fromWheelAngle.y(),0.01))
 			{
 				double combined_velocity_magnitude=0.0;
 				for (size_t i = 0; i < 4; i++)
@@ -1517,7 +1580,7 @@ public:
 				if (IsZero(combined_velocity_magnitude,0.01))
 				{
 					m_Friction.SetVelocity(aligned_to_Intended_velocity.y());
-					friction_y = m_Friction.GetFrictionalForce(dTime_s,0);
+					friction_y = m_Friction.GetFrictionalForce(dTime_s, FrictionMode);
 				}
 			}
 			//now to get friction force to be applied to x component
@@ -1548,7 +1611,7 @@ public:
 					const double rot_linear = AngularVelocity * to_linear;
 					assert(turning_diameter != 0.0);  //sanity check
 					m_Friction.SetVelocity(rot_linear);
-					const double friction_rot = m_Friction.GetFrictionalForce(dTime_s,0) / to_linear; //as radians
+					const double friction_rot = m_Friction.GetFrictionalForce(dTime_s, FrictionMode) / to_linear; //as radians
 					m_Payload.ApplyFractionalTorque(friction_rot, dTime_s);
 				}
 			}
@@ -1558,24 +1621,36 @@ public:
 		//printf("--%.2f,", current_payload_velocity.y());
 		const double current_payload_angular_velocity = m_Payload.GetAngularVelocity();
 		const SwerveVelocities &AdjustedToExisting=m_Output.UpdateFromExisting(current_payload_velocity.y(), current_payload_velocity.x(), 
-			current_payload_angular_velocity,ForcesForPayload);
+			current_payload_angular_velocity, InitialVelocitiesForPayload);
 		//Now we can apply the torque to the wheel
 		for (size_t i = 0; i < 4; i++)
 		{
+			Potentiometer_Tester4& encoder = m_Encoders[i];
+			Framework::Base::PhysicsEntity_1D& wheel_model = encoder.GetWheelModel_rw();
 			//const double Force = m_Output.GetIntendedVelocitiesFromIndex(i);
 			//const double Torque = Force * Inches2Meters(m_WheelDiameter_In * 0.5);
-			Potentiometer_Tester4& encoder = m_Encoders[i];
 			const double WheelVelocity_fromPayload = AdjustedToExisting.Velocity.AsArray[i] / Inches2Meters(m_WheelDiameter_In * 0.5);
+			#if 0
 			//To set the velocity directly it works with motor velocity so we'll need to apply the inverse gear ratio
-			m_Encoders[i].GetWheelModel_rw().SetVelocity(WheelVelocity_fromPayload * (1.0/encoder.GetGearReduction()));
+			wheel_model.SetVelocity(WheelVelocity_fromPayload * (1.0/encoder.GetGearReduction()));
+			#else
+			//Instead of setting the velocity directly, we can apply as a torque, this way if we skid we can apply less force for adjustments
+			//Note: In simulation we work with motor velocity, and do not care about where the physical encoder is, because the actual encoder
+			//output is linear velocity.  Outside the simulation using a real encoder will need to use the encoder's reduction to have the 
+			//same output of linear velocity
+			const double motor_velocity = WheelVelocity_fromPayload * (1.0 / encoder.GetGearReduction());
+			double torque_load = (motor_velocity - wheel_model.GetVelocity()) / dTime_s * wheel_model.GetMomentofInertia();
+			//separating this out for easy of debugging:
+			if (IsSkidding)
+				torque_load = 0.0; //This is not correct, but will help us visualize the skid this is some impact on the velocity though
+			wheel_model.ApplyFractionalTorque(torque_load, dTime_s);
+
+			#endif
 			//Now that the velocity has taken effect we can add in the adverse torque
-			const double WheelVelocity= encoder.GetWheelModel_rw().GetVelocity() * encoder.GetGearReduction();
+			const double WheelVelocity= wheel_model.GetVelocity() * encoder.GetGearReduction();
 			const double LinearVelocity = WheelVelocity * Inches2Meters(m_WheelDiameter_In * 0.5);
-			//disabled until we confirm it ready
-			#if 1
 			//finally update our odometry, note we work in linear velocity so we multiply by the wheel radius
 			m_CurrentVelocities_callback().Velocity.AsArray[i] = LinearVelocity;
-			#endif
 		}
 	}
 	void SetCurrentVelocities_Callback(std::function<SwerveVelocities&()> callback)
@@ -1588,6 +1663,11 @@ public:
 			m_Encoders[i].ResetPos();
 		m_Payload.ResetVectors();
 	}
+	const Framework::Base::PhysicsEntity_2D& GetPayload() const
+	{
+		//read access for advanced sensors to use
+		return m_Payload;
+	}
 };
 #endif  //If __UseLegacySimulation__
 #pragma endregion
@@ -1597,6 +1677,7 @@ public:
 class SimulatedOdometry_Internal
 {
 private:
+	#pragma region _member vars_
 	SwerveVelocities m_CurrentVelocities;
 	std::function<SwerveVelocities()> m_VoltageCallback;
 	double m_maxspeed = Feet2Meters(12.0); //max velocity forward in meters per second
@@ -1612,9 +1693,48 @@ private:
 	#else
 	Potentiometer_Tester4 m_Potentiometers[4];
 	SwerveEncoders_Simulator4 m_EncoderSim4;
+
+	class AdvancedSensors
+	{
+	private:
+		SimulatedOdometry_Internal* m_pParent;
+		Vec2D m_current_position;
+		double m_current_heading = 0.0;
+	public:
+		AdvancedSensors(SimulatedOdometry_Internal* parent) : m_pParent(parent)
+		{
+		}
+		void TimeSlice(double d_time_s)
+		{
+			using namespace Framework::Base;
+			//grab our velocities
+			const Framework::Base::PhysicsEntity_2D& payload = m_pParent->m_EncoderSim4.GetPayload();
+			const double AngularVelocity = payload.GetAngularVelocity();
+			//update our heading
+			m_current_heading += AngularVelocity * d_time_s;
+			//With latest heading we can adjust our position delta to proper heading
+			const Vec2D local_velocity = payload.GetLinearVelocity();
+			const Vec2D global_velocity = LocalToGlobal(m_current_heading, local_velocity);
+			//Now we can advance with the global
+			m_current_position += global_velocity * d_time_s;
+		}
+		void Reset()
+		{
+			m_current_position = Vec2D(0.0, 0.0);
+			m_current_heading = 0.0;
+		}
+		Vec2D Vision_GetCurrentPosition() const
+		{
+			return m_current_position;
+		}
+		double GyroMag_GetCurrentHeading() const
+		{
+			return m_current_heading;
+		}
+	} m_AdvancedSensors=this;
 	#endif
 	bool m_UseBypass = true;
-
+	#pragma endregion
 	inline double NormalizeRotation2(double Rotation)
 	{
 		const double Pi2 = M_PI * 2.0;
@@ -1712,6 +1832,7 @@ public:
 				m_Potentiometers[i].ResetPos();
 			}
 			#else
+			m_AdvancedSensors.Reset();
 			#endif
 		}
 	}
@@ -1787,6 +1908,7 @@ public:
 			#else
 			//Ensure potentiometers are updated before calling sim4
 			m_EncoderSim4.TimeChange(d_time_s);
+			m_AdvancedSensors.TimeSlice(d_time_s);
 			#endif
 		}
 	}
@@ -1795,6 +1917,40 @@ public:
 		//Output: contains the current speeds and positions of any given moment of time
 		return m_CurrentVelocities;
 	}
+	#pragma region _advanced_sensor_methods_
+	bool Sim_SupportVision() const
+	{
+		#ifdef __UseLegacySimulation__
+		return false;
+		#else
+		return true;
+		#endif
+	}
+	Vec2D Vision_GetCurrentPosition() const
+	{
+		#ifdef __UseLegacySimulation__
+		return Vec2D(0, 0);
+		#else
+		return m_AdvancedSensors.Vision_GetCurrentPosition();
+		#endif
+	}
+	bool Sim_SupportHeading() const
+	{
+		#ifdef __UseLegacySimulation__
+		return false;
+		#else
+		return true;
+		#endif
+	}
+	double GyroMag_GetCurrentHeading() const
+	{
+		#ifdef __UseLegacySimulation__
+		return 0.0;
+		#else
+		return m_AdvancedSensors.GyroMag_GetCurrentHeading();
+		#endif
+	}
+	#pragma endregion
 };
 #pragma endregion
 #pragma region _wrapper methods_
@@ -1826,6 +1982,21 @@ const SwerveVelocities &SimulatedOdometry::GetCurrentVelocities() const
 {
 	return m_simulator->GetCurrentVelocities();
 }
-
+bool SimulatedOdometry::Sim_SupportVision() const
+{
+	return m_simulator->Sim_SupportVision();
+}
+Vec2D SimulatedOdometry::Vision_GetCurrentPosition() const
+{
+	return m_simulator->Vision_GetCurrentPosition();
+}
+bool SimulatedOdometry::Sim_SupportHeading() const
+{
+	return m_simulator->Sim_SupportHeading();
+}
+double SimulatedOdometry::GyroMag_GetCurrentHeading() const
+{
+	return m_simulator->GyroMag_GetCurrentHeading();
+}
 #pragma endregion
 }}

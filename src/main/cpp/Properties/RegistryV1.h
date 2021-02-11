@@ -16,6 +16,9 @@ namespace registry_v1
 #define Rg_(x) const char * const csz_##x = #x;
 
 	Rg_(Build_bypass_simulation)
+	Rg_(Build_hook_simulation)
+	Rg_(Build_sim_prediction_vars)
+	Rg_(Build_sim_target_reticle)
 
 #pragma region _prefix section_
 	//instance named prefix for each wheel front, and rear... of left and right, left is port side, right starboard
@@ -58,6 +61,7 @@ namespace registry_v1
 	Rg_(Ship2D_Rotation_Tolerance)
 	Rg_(Ship2D_Rotation_ToleranceConsecutiveCount)
 	Rg_(Ship2D_Rotation_TargetDistanceScaler)
+	Rg_(Ship2D_CentripetalGuard_Blend)
 #pragma endregion
 
 #pragma region _rotary_properties legacy_
@@ -163,7 +167,8 @@ namespace registry_v1
 	//and CommonSwivel_ prefix for Potentiometer_Tester4 to override these defaults
 	Rg_(Pot4_free_speed_rad) //radians per second of motor
 	Rg_(Pot4_stall_torque_NM) //Nm
-	Rg_(Pot4_gear_reduction)
+	Rg_(Pot4_encoder_gear_reduction)  //used by real encoder from its position to the wheel
+	Rg_(Pot4_motor_gear_reduction)   //used by simulation from motor to the wheel
 	Rg_(Pot4_gear_box_effeciency) //This will account for the friction
 	Rg_(Pot4_mass)
 	//Use SolidWorks and get the cube root of the volume which gives a rough diameter error on the side of larger

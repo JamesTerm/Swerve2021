@@ -1,7 +1,5 @@
 #pragma once
 #include <functional>
-//Need PI_2
-#include "../../../Base/Misc.h"
 //need Vec2D
 #include "../../../Base/Vec2d.h"
 //need SwerveVelocities
@@ -189,7 +187,7 @@ public:
 	}
 
 	//Odometry callback of each wheel module
-	void SetOdometryCallback(std::function< SwerveVelocities ()> callback)
+	void SetOdometryVelocityCallback(std::function< SwerveVelocities ()> callback)
 	{
 		m_OdometryCallback = callback;
 	}

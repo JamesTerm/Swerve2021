@@ -399,15 +399,16 @@ private:
 		#pragma region _ship 2d props_
 		//Ship props:
 		const double Mass = 25; //Weight kg
-		const double MaxAccelLeft = 20; 
-		const double MaxAccelRight = 20;
+		//Note: MaxAccel Left and Right also control centripetal force
+		const double MaxAccelLeft = Drive_MaxAccel;
+		const double MaxAccelRight = Drive_MaxAccel;
 		const double MaxAccelForward = Drive_MaxAccel; 
 		const double MaxAccelReverse = Drive_MaxAccel;
 		const double MaxAccelForward_High = Drive_MaxAccel * 2; 
 		const double MaxAccelReverse_High = Drive_MaxAccel * 2;
 		const double MaxTorqueYaw = gMaxTorqueYaw; //Note Bradley had 0.78 reduction to get the feel
-		const double MaxTorqueYaw_High = gMaxTorqueYaw * 5;
-		const double MaxTorqueYaw_SetPoint = gMaxTorqueYaw * 2;
+		const double MaxTorqueYaw_High = gMaxTorqueYaw;
+		const double MaxTorqueYaw_SetPoint = gMaxTorqueYaw * 10.0;
 		const double MaxTorqueYaw_SetPoint_High = gMaxTorqueYaw * 10;
 		const double rotation_tolerance = Deg2Rad * 2;
 		const double rotation_distance_scaler = 1.0;
@@ -549,7 +550,7 @@ private:
 			PNy(Rotation_Tolerance,rotation_tolerance);
 			//PNy(Rotation_ToleranceConsecutiveCount,rotation_tolerance_count);
 			PNy(Rotation_TargetDistanceScaler,rotation_distance_scaler);
-
+			PNy(CentripetalGuard_Blend,0.65);
 			#undef PN_
 			#undef PNy
 		}
@@ -583,8 +584,8 @@ private:
 			//PUT_NUMBER(Rotary_PrecisionTolerance, 0.03);
 			//Use _c, _t1, _t2, _t3, _t4 for array 0..5 respectively
 			//PUT_NUMBER(Rotary_Voltage_Terms) //PolynomialEquation_forth_Props 
-			PUT_NUMBER(Rotary_InverseMaxAccel, val.inv_max_accel);
-			//PUT_NUMBER(Rotary_InverseMaxDecel, val.InverseMaxDecel);
+			//PUT_NUMBER(Rotary_InverseMaxAccel, val.inv_max_accel);
+			//PUT_NUMBER(Rotary_InverseMaxDecel, 1.0/4.0);
 			//PUT_NUMBER(Rotary_Positive_DeadZone, val.Positive_DeadZone);
 			//PUT_NUMBER(Rotary_Negative_DeadZone, val.Negative_DeadZone);
 			//PUT_NUMBER(Rotary_MinLimitRange, val.MinLimitRange);
@@ -602,7 +603,8 @@ private:
 			PUT_NUMBER(Pot4_dead_zone, 0.13); //see how this relates to speed loss constant
 			PUT_NUMBER(Pot4_free_speed_rad, 5880 * (1.0 / 60.0) * Pi2);
 			PUT_NUMBER(Pot4_gear_box_effeciency, 0.9);
-			PUT_NUMBER(Pot4_gear_reduction, 1.0 / 9.0);
+			PUT_NUMBER(Pot4_motor_gear_reduction, 1.0 / 9.0);
+			PUT_NUMBER(Pot4_encoder_gear_reduction, val.encoder_to_wheel_ratio);
 			PUT_NUMBER(Pot4_mass, Pounds2Kilograms(3.0));
 			PUT_NUMBER(Pot4_RadiusOfConcentratedMass, Inches2Meters(1.12));  //Motor radius
 			PUT_NUMBER(Pot4_AngularInertiaCoefficient, 0.5);  //using a solid cylinder or disc)
@@ -696,7 +698,8 @@ private:
 
 				//Note: we have some adjusted properties for Pot4 in here, so we keep these separate from Pot 2
 				PUT_NUMBER(Pot4_stall_torque_NM, 0.71);
-				PUT_NUMBER(Pot4_gear_reduction, (1.0 / 81.0)* (3.0 / 7.0));
+				PUT_NUMBER(Pot4_motor_gear_reduction, (1.0 / 81.0)* (3.0 / 7.0));
+				PUT_NUMBER(Pot4_encoder_gear_reduction, val.encoder_to_wheel_ratio);
 				PUT_NUMBER(Pot4_gear_box_effeciency, 0.65);
 				//These are difficult to tune, especially the radius of concentrated mass, but dictate the rate acceleration
 				PUT_NUMBER(Pot4_mass, 0.34);
@@ -792,6 +795,10 @@ public:
 		//compatible, as the bypass simulation option itself is
 		#if 1
 		assets.put_bool(csz_Build_bypass_simulation, false);
+		//all false for real robot
+		assets.put_bool(csz_Build_hook_simulation, true);  
+		assets.put_bool(csz_Build_sim_prediction_vars, false);
+		assets.put_bool(csz_Build_sim_target_reticle, false);
 		#else
 		assets.put_bool(csz_Build_bypass_simulation, true);
 		#endif
