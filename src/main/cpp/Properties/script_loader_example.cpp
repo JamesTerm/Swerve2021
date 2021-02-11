@@ -797,7 +797,7 @@ public:
 		assets.put_bool(csz_Build_bypass_simulation, false);
 		//all false for real robot
 		assets.put_bool(csz_Build_hook_simulation, true);  
-		assets.put_bool(csz_Build_sim_prediction_vars, false);
+		assets.put_bool(csz_Build_sim_prediction_vars, true);
 		assets.put_bool(csz_Build_sim_target_reticle, false);
 		#else
 		assets.put_bool(csz_Build_bypass_simulation, true);
