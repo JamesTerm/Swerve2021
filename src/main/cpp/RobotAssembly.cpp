@@ -1571,6 +1571,11 @@ private:
 				{
 					return m_robot.GetSimulatedVelocities();	
 				});
+			m_WPI.SetSimOdometry_heading(
+				[&]()
+				{
+					return GetEntity().GetCurrentHeading();
+				});
 			//For simulation we can bypass this and use our own internal simulation
 			#ifndef __BypassPhysicalOdometry__
 			m_robot.SetPhysicalOdometry(

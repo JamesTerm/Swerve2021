@@ -2,8 +2,10 @@
 #include <frc/RobotBase.h>
 #include <frc/PWMVictorSPX.h>
 #include <frc/Encoder.h>
+#include <frc/AnalogGyro.h>
 #include <frc/simulation/EncoderSim.h>
 #include <frc/simulation/SimDeviceSim.h>
+#include <frc/simulation/AnalogGyroSim.h>
 #include <hal/SimDevice.h>
 #include <wpi/math>
 #include "WPI_Output.h"
@@ -293,9 +295,7 @@ private:
                         m_turningEncoder_sim=std::make_shared<sim::EncoderSim>(*m_turningEncoder);
                     }
                     std::string deviceKey = "SPARK MAX [" ;
-                    char buffer[4];
-                    itoa(m_ThisSectionIndex,buffer,10);
-                    deviceKey += buffer;
+                    deviceKey += std::to_string(m_ThisSectionIndex);
                     deviceKey += "]";
                     m_SparkMaxSimDevice = std::make_shared<sim::SimDeviceSim>(deviceKey.c_str());
                 }
@@ -447,10 +447,22 @@ class WPI_Output_Internal
 {
 private:
     WheelModule_Interface m_Implementation;
+    std::shared_ptr<frc::AnalogGyro> m_Gyro;
+    std::shared_ptr<frc::sim::AnalogGyroSim> m_SimGyro;
+    std::function<double ()> m_OurSimGyroCallback=nullptr;
 public:
     void Init(const Framework::Base::asset_manager *props=nullptr)
     {
         m_Implementation.Init(props);
+        //TODO add property check for gyro
+        if (false)
+        {
+            using namespace frc;
+            const int channel=0;
+            m_Gyro=std::make_shared<frc::AnalogGyro>(channel);
+            if (RobotBase::IsSimulation())
+                m_SimGyro = std::make_shared<sim::AnalogGyroSim>(*m_Gyro);
+        }
     }
     void TimeSlice(double dTime_s)
     {
@@ -459,10 +471,16 @@ public:
     void SimulatorTimeSlice(double dTime_s) 
     {
         m_Implementation.SimulatorTimeSlice(dTime_s);
+        if ((m_Gyro)&&(m_OurSimGyroCallback))
+            m_SimGyro->SetAngle(RAD_2_DEG(m_OurSimGyroCallback()));
     }
     void SetSimOdometry(std::function<Robot::SwerveVelocities ()> callback)
     {
         m_Implementation.SetSimOdometry(callback);
+    }
+    void SetSimOdometry_heading(std::function<double ()> callback)
+    {
+        m_OurSimGyroCallback=callback;
     }
 	void SetVoltageCallback(std::function<Robot::SwerveVelocities ()> callback)
     {
@@ -494,6 +512,10 @@ void WPI_Output::SimulatorTimeSlice(double dTime_s)
 void WPI_Output::SetSimOdometry(std::function<Robot::SwerveVelocities ()> callback)
 {
     m_WPI->SetSimOdometry(callback);
+}
+void WPI_Output::SetSimOdometry_heading(std::function<double ()> callback)
+{
+    m_WPI->SetSimOdometry_heading(callback);
 }
 void WPI_Output::SetVoltageCallback(std::function<Robot::SwerveVelocities ()> callback)
 {
