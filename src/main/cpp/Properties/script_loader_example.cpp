@@ -802,6 +802,7 @@ public:
 		#else
 		assets.put_bool(csz_Build_bypass_simulation, true);
 		#endif
+		assets.put_bool(csz_Misc_have_gyro, true);
 		//TestIndivualWheels();
 		//TestCurivator();
 		TestAndromeda();

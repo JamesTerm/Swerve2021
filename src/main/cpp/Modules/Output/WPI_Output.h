@@ -25,11 +25,13 @@ public:
     void SetSimOdometry(std::function<Robot::SwerveVelocities ()> callback);
     //Optional: use our simulated odometry for gyro
     void SetSimOdometry_heading(std::function<double ()> callback);
-    
+
    	//Input: grab the voltages from each rotary system
 	void SetVoltageCallback(std::function<Robot::SwerveVelocities ()> callback);
    	//Output: contains the current speeds and positions of any given moment of time
 	const Robot::SwerveVelocities &GetCurrentVelocities() const;
+    //Output: contains the final resulting heading
+    double GyroMag_GetCurrentHeading() const;
 private:
     std::shared_ptr<WPI_Output_Internal> m_WPI;
 };

@@ -454,8 +454,9 @@ public:
     void Init(const Framework::Base::asset_manager *props=nullptr)
     {
         m_Implementation.Init(props);
-        //TODO add property check for gyro
-        if (false)
+   		using namespace ::properties::registry_v1;
+		const bool HaveGyro = props ? props->get_bool(csz_Misc_have_gyro, false) : false;
+        if (HaveGyro)
         {
             using namespace frc;
             const int channel=0;
@@ -471,6 +472,7 @@ public:
     void SimulatorTimeSlice(double dTime_s) 
     {
         m_Implementation.SimulatorTimeSlice(dTime_s);
+        //Note: this should be normalized to 360, but GEMO
         if ((m_Gyro)&&(m_OurSimGyroCallback))
             m_SimGyro->SetAngle(RAD_2_DEG(m_OurSimGyroCallback()));
     }
@@ -489,6 +491,13 @@ public:
 	const Robot::SwerveVelocities &GetCurrentVelocities() const
     {
         return m_Implementation.GetCurrentVelocities();
+    }
+    double GyroMag_GetCurrentHeading() const
+    {
+        //TODO: This is way over-simplified but effective for simulation, here we would access the encoder's predicted position
+        //and magnotometer and average them together with some logic for a final heading
+        assert(m_Gyro);
+        return DEG_2_RAD(m_Gyro->GetAngle());
     }
 };
 
@@ -524,6 +533,10 @@ void WPI_Output::SetVoltageCallback(std::function<Robot::SwerveVelocities ()> ca
 const Robot::SwerveVelocities &WPI_Output::GetCurrentVelocities() const
 {
     return m_WPI->GetCurrentVelocities();
+}
+double WPI_Output::GyroMag_GetCurrentHeading() const
+{
+    return m_WPI->GyroMag_GetCurrentHeading();
 }
 #pragma endregion
 

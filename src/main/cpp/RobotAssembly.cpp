@@ -1574,7 +1574,7 @@ private:
 			m_WPI.SetSimOdometry_heading(
 				[&]()
 				{
-					return GetEntity().GetCurrentHeading();
+					return m_robot.Get_SimulatedCurrentHeading();
 				});
 			//For simulation we can bypass this and use our own internal simulation
 			#ifndef __BypassPhysicalOdometry__
@@ -1606,6 +1606,16 @@ private:
 		//call predecessor first to setup the properties
 		Test_Swerve_Properties::Init();
 		m_WPI.Init(&m_properties);
+   		using namespace ::properties::registry_v1;
+		const bool HaveGyro = m_properties.get_bool(csz_Misc_have_gyro, false);
+        if (HaveGyro)
+		{
+			m_robot.SetPhysicalOdometry_heading(
+				[&]()
+				{
+					return m_WPI.GyroMag_GetCurrentHeading();
+				});
+		}
 	}
 	void TimeSlice(double dTime_s)
 	{
