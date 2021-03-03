@@ -4,7 +4,7 @@
 #include "Goal_Types.h"
 #include "SmartDashboard_HelperFunctions.h"
 #include "AI_BaseController_goals.h"
-
+#include "../../../Properties/RegistryV1.h"
 using namespace Framework::Base;
 
 namespace Module
@@ -19,6 +19,7 @@ private:
 	AI_Input* m_pParent=nullptr;
 	double m_Timer=0.0;
 	MultitaskGoal m_Primer;
+	const Framework::Base::asset_manager* m_properties=nullptr;
 	enum AutonType
 	{
 		eDoNothing,
@@ -26,6 +27,7 @@ private:
 		eJustRotate,
 		eSimpleMoveRotateSequence,
 		eTestBoxWayPoints,
+		eTestSmartWayPoints,
 		//eDriveTracking,
 		eNoAutonTypes
 	};
@@ -239,6 +241,36 @@ private:
 		Goal_Ship_FollowPath* goal = new Goal_Ship_FollowPath(Parent, points, false, true);
 		return goal;
 	}
+	static Goal* SmartWaypoints(AI_Input* Parent, double max_speed)
+	{
+		const char* const Waypoint_Count = "waypoint_count";
+		const size_t wp_count = (size_t)Auton_Smart_GetSingleValue(Waypoint_Count, 1.0);
+		std::list <WayPoint> points;
+		//we'll push one group at a time to our list (keeping it simple)
+		for (size_t i = 0; i < wp_count; i++)
+		{
+			//generate our group of points
+			std::string WP_x="wp_x_";
+			WP_x += std::to_string((double)i);
+			std::string WP_y = "wp_y_";
+			WP_y += std::to_string((double)i);
+			std::string WP_speed = "wp_speed_";
+			WP_speed += std::to_string((double)i);
+			const char* const SmartNames[] = { WP_x.c_str(),WP_y.c_str(),WP_speed.c_str()};
+			double X=0.0, Y=0.0, Speed=1.0;
+			double* const SmartVariables[] = { &X,&Y,&Speed};
+			Auton_Smart_GetMultiValue(3, SmartNames, SmartVariables);
+			//Now to setup this way point
+			WayPoint wp;
+			wp.Position[0] = Feet2Meters(X);
+			wp.Position[1] = Feet2Meters(Y);
+			wp.Power = Speed * max_speed;
+			points.push_back(wp);
+		}
+		//Now to setup the goal
+		Goal_Ship_FollowPath* goal = new Goal_Ship_FollowPath(Parent, points, false, true);
+		return goal;
+	}
 	#pragma endregion
 	//Reserved Drive Tracking
 public:
@@ -252,9 +284,13 @@ public:
 		m_chooser.AddOption("Just Rotate",eJustRotate);
 		m_chooser.AddOption("Move Rotate Sequence",eSimpleMoveRotateSequence);
 		m_chooser.AddOption("Test Box Waypoints",eTestBoxWayPoints);
+		m_chooser.AddOption("Auto SmartDashboard Waypoints",eTestSmartWayPoints);
   		frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
 	}
-
+	void Initialize(const Framework::Base::asset_manager* props)
+	{
+		m_properties = props;  //just reference it we know it stays active
+	}
 	void Activate()
 	{
 		m_Primer.AsGoal().Terminate();  //sanity check clear previous session
@@ -283,6 +319,15 @@ public:
 			break;
 		case eTestBoxWayPoints:
 			m_Primer.AddGoal(GiveRobotSquareWayPointGoal(m_pParent));
+			break;
+		case eTestSmartWayPoints:
+		{
+			using namespace properties::registry_v1;
+			std::string max_speed_name = csz_CommonDrive_;
+			max_speed_name += csz_Ship_1D_MAX_SPEED;
+			const double max_speed = m_properties ? m_properties->get_number(max_speed_name.c_str(), 1.0) : 1.0;
+			m_Primer.AddGoal(SmartWaypoints(m_pParent,max_speed));
+		}
 			break;
 		//case eDriveTracking:
 		//	m_Primer.AddGoal(new DriveTracking(this));
@@ -314,6 +359,11 @@ public:
 AI_Example::AI_Example()
 {
 	m_AI_Input = std::make_shared<AI_Example_internal>(this);
+}
+
+void AI_Example::Initialize(const Framework::Base::asset_manager* props)
+{
+	m_AI_Input->Initialize(props);
 }
 
 Goal& AI_Example::GetGoal()
